@@ -1,17 +1,20 @@
 {
-  "name": "koishi-plugin-bridge-discord-qq",
-  "description": "Developed by Xc_ace",
-  "version": "1.0.0",
-  "main": "lib/index.js",
-  "typings": "lib/index.d.ts",
+  "name": "koishi-plugin-bridge-qq-discord",
+  "description": "自用插件，如需使用请联系我（联系方式见Github）",
+  "version": "1.2.7",
   "contributors": [
     "Xc_ace <xca259@gmail.com>"
   ],
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
   "files": [
-    "lib",
-    "dist"
+    "lib"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq.git"
+  },
   "keywords": [
     "chatbot",
     "koishi",
@@ -19,5 +22,18 @@
   ],
   "peerDependencies": {
     "koishi": "^4.17.9"
+  },
+  "koishi": {
+    "description": {
+      "zh": "联通discord与qq（自用插件）",
+      "en": "Unite discord and qq"
+    }
+  },
+  "dependencies": {
+    "koishi-plugin-adapter-onebot": "^6.5.8",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/uuid": "^10"
   }
 }
