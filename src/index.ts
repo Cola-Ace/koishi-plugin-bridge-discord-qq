@@ -1,8 +1,12 @@
-import { Context, Schema, Logger, h } from 'koishi';
+import { Context, h } from 'koishi';
 import { DiscordBot } from '@koishijs/plugin-adapter-discord';
 import {} from 'koishi-plugin-adapter-onebot';
 import { v4 as uuidv4 } from 'uuid';
+import { Config } from './config';
 // import { emit } from 'process';
+
+export * from "./config";
+import { getBinary, convertMsTimestampToISO8601, logger } from './utils';
 
 // h.file 用法:
 // h.file(ArrayBuffer, type)
@@ -11,110 +15,6 @@ import { v4 as uuidv4 } from 'uuid';
 export const name = 'bridge-qq-discord';
 
 export const inject = ["database"]
-
-export interface Constant {
-    enable: boolean,
-    note: string,
-    from: Array<BasicType>,
-    to: Array<BasicType>
-}
-
-export interface BasicType {
-    platform: string,
-    channel_id: string,
-    self_id: string
-}
-
-export interface Config {
-    words_blacklist: Array<string>,
-    file_transform: any,
-    constant?: Array<Constant>
-};
-
-declare module "koishi" {
-    interface Tables {
-        bridge_message: BridgeMessage
-    }
-}
-
-export interface BridgeMessage {
-    id: number,
-    timestamp: bigint,
-    from_message_id: string,
-    from_platform: string,
-    from_channel_id: string,
-    from_guild_id: string,
-    from_sender_id: string,
-    from_sender_name: string,
-    to_message_id: string,
-    to_platform: string,
-    to_channel_id: string,
-    to_guild_id: string,
-    onebot_real_message_id: string
-}
-
-const logger = new Logger("debug");
-
-export const Config: Schema<Config> = Schema.object({
-    words_blacklist: Schema.array(String),
-    file_transform: Schema.union([
-        Schema.const(null).description("不发送文件"),
-        Schema.object({
-            url: Schema.string().required().description("远程url"),
-            token: Schema.string().required().description("用于验证的token")
-        }).description("转换文件")
-    ]),
-    constant: Schema.array(Schema.object({
-        enable: Schema.boolean().description("是否启用").default(true),
-        note: Schema.string().description("备注"),
-        from: Schema.array(Schema.object({
-            platform: Schema.string().description("来源平台"),
-            channel_id: Schema.string().description("频道ID"),
-            self_id: Schema.string().description("自身ID")
-        })),
-        to: Schema.array(Schema.object({
-            platform: Schema.string().description("目标平台"),
-            channel_id: Schema.string().description("频道ID"),
-            self_id: Schema.string().description("自身ID")
-        }))
-    }))
-});
-
-
-async function getBinary(url: string): Promise<[Blob, String] | null> {
-    try {
-        const headers = new Headers({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-        });
-
-        const response = await fetch(url, {
-            method: "GET",
-            headers: headers,
-        });
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status} | Response: ${response.text}`);
-        }
-        return [await response.blob(), response.headers.get("Content-Type")];
-    } catch (error) {
-        logger.error('Error fetching:', error);
-        return null;
-    }
-}
-
-// function generateSnowflake(): string{
-//     let timestamp = BigInt(Date.now());
-//     timestamp -= 1420070400000n;
-//     return (timestamp << 22n).toString();
-// }
-
-function convertMsTimestampToISO8601(msTimestamp: number): string {
-    // 创建一个 Date 对象，传入毫秒级的时间戳
-    const date = new Date(msTimestamp);
-  
-    // 使用 .toISOString() 方法转换为 ISO 8601 格式
-    // 注意：此方法返回的是 UTC 时间
-    return date.toISOString();
-  }
 
 export function apply(ctx: Context, config: Config) {
     ctx.model.extend("bridge_message", {
@@ -203,7 +103,7 @@ export function apply(ctx: Context, config: Config) {
 
                                             message += element.attrs.content;
                                             valid_element = true;
-                                            
+
                                             break;
                                         }
                                         case "img":{
@@ -218,9 +118,8 @@ export function apply(ctx: Context, config: Config) {
                                             const file_url = element.children[0].attrs.src;
                                             if (file_url === "") break;
 
-                                            const url_array = file_url.split("/");
                                             const [blob, type] = await getBinary(file_url);
-                                            form.append(`files[${n}]`, blob, url_array[url_array.length - 1]);
+                                            form.append(`files[${n}]`, blob, `${uuidv4()}.${type.split("/")[1]}`);
                                             n++;
                                             valid_element = true;
 
@@ -238,7 +137,8 @@ export function apply(ctx: Context, config: Config) {
                                             break;
                                         }
                                         case "forward":{
-                                            // const data = await session.onebot.getForwardMsg(message_data.id);
+                                            // logger.info(element.attrs.id);
+                                            const data = await session.onebot.getForwardMsg(element.attrs.id);
                                             // logger.info(data);
                                             message += "【检测到合并转发，请前往qq查看】";
                                             valid_element = true;
@@ -286,8 +186,8 @@ export function apply(ctx: Context, config: Config) {
                                             }
                                             try {
                                                 const res = await session.onebot.getImage(element.attrs.fileId);
-                                                const filename = res["file"].split("/");
-                                                const [file, type] = await getBinary(`${config.file_transform.url}/${config.file_transform.token}/${filename[filename.length - 1]}`);
+                                                const filename = res["file"].split("/").pop();
+                                                const [file, type] = await getBinary(`${config.file_transform.url}/${config.file_transform.token}/${filename}`);
                                                 if (file === null){
                                                     message += "文件传输失败，请联系管理员";
                                                     valid_element = true;
@@ -442,12 +342,11 @@ export function apply(ctx: Context, config: Config) {
                             }
 
                             // Discord -> QQ
-                            const bot = ctx.bots[`${to.platform}:${to.self_id}`];
+                            const qqbot = ctx.bots[`${to.platform}:${to.self_id}`];
                             const dc_bot = ctx.bots[`discord:${from.self_id}`];
 
                             if (nickname != null && nickname.indexOf("TweetShift") != -1){ // 判断是否为 tweetshift
                                 const msg = await dc_bot.internal.getChannelMessage(session.event.channel.id, message_data.id);
-                                logger.info(msg);
                                 
                                 let message = "";
                                 message += `${msg["content"]}\n${"description" in msg["embeds"][0] ? msg["embeds"][0]["description"]:""}`;
@@ -460,7 +359,7 @@ export function apply(ctx: Context, config: Config) {
                                     if ("image" in embed) message += h.image(embed["image"]["url"]);
                                 }
 
-                                const message_id = await bot.sendMessage(to.channel_id, `${ h.image(msg["embeds"][0]["author"]["icon_url"].replace(".jpg", "_200x200.jpg")) }[Discord·TweetShift] ${msg["embeds"][0]["author"]["name"]}:\n${message}`);
+                                const message_id = await qqbot.sendMessage(to.channel_id, `${ h.image(msg["embeds"][0]["author"]["icon_url"].replace(".jpg", "_200x200.jpg")) }[Discord·TweetShift] ${msg["embeds"][0]["author"]["name"]}:\n${message}`);
                                 const from_guild_id = await ctx.database.get("channel", {
                                     id: channel_id
                                 });
@@ -514,16 +413,35 @@ export function apply(ctx: Context, config: Config) {
                                         }
                                         
                                         message += element.attrs.content;
+
                                         break;
                                     }
 
                                     case "img":{
                                         message += h.image(element.attrs.src);
+
                                         break;
                                     }
 
                                     case "face":{
                                         message += h.image(element.children[0].attrs.src);
+
+                                        break;
+                                    }
+
+                                    case "file":{
+                                        if (parseInt(element.attrs.size) > 20971520){ // 20MB
+                                            message += "【检测到大小超过20MB的文件，请到discord查看】"
+                                            break;
+                                        }
+                                        const output = await qqbot.internal.downloadFile(element.attrs.src);
+
+                                        await qqbot.internal.uploadGroupFile(to.channel_id, output, element.attrs.file);
+
+                                        if (config.file_transform != undefined){
+                                            await getBinary(`${config.file_transform.url}/${config.file_transform.token}/${output.split("/").pop()}`); // 删除文件
+                                        }
+
                                         break;
                                     }
 
@@ -533,6 +451,7 @@ export function apply(ctx: Context, config: Config) {
                                             break;
                                         }
                                         message += h("video", { src: element.attrs.src });
+
                                         break;
                                     }
 
@@ -551,7 +470,7 @@ export function apply(ctx: Context, config: Config) {
                             let retry_count = 0;
                             while (1){
                                 try {
-                                    const message_id = await bot.sendMessage(to.channel_id, `${quoted_message_id == null ? "":h.quote(quoted_message_id)}${h.image(`${sender.avatar}?size=64`)}[Discord] ${nickname}:\n${message}`);
+                                    const message_id = await qqbot.sendMessage(to.channel_id, `${quoted_message_id == null ? "":h.quote(quoted_message_id)}${h.image(`${sender.avatar}?size=64`)}[Discord] ${nickname}:\n${message}`);
                                     const from_guild_id = await ctx.database.get("channel", {
                                         id: channel_id
                                     });
