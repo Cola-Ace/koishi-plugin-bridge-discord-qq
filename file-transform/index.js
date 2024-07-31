@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const valid_token = ""; // 替换为自己的 token
+const temp_path = "" // 替换为自己的 temp 文件夹
 
 router.get("/file/:token/:filename", (req, res) => {
     if (!req.params.token || !req.params.filename){
@@ -12,7 +13,7 @@ router.get("/file/:token/:filename", (req, res) => {
         return res.status(400).send({ code: 400, message: 'Authorization Failed', data: '' });
     }
     
-    res.download(`/opt/qqbot/QQ/NapCat/temp/${req.params.filename}`, (error) => {
+    res.download(`${temp_path}${req.params.filename}`, (error) => {
         if (!res.headersSent){
             console.log(error);
             return res.status(400).send({ code: 400, message: 'No such file', data: '' });
@@ -20,7 +21,7 @@ router.get("/file/:token/:filename", (req, res) => {
 
         // 删除文件
         const fs = require('fs');
-        fs.unlink(`/opt/qqbot/QQ/NapCat/temp/${req.params.filename}`, (err) => {
+        fs.unlink(`${temp_path}${req.params.filename}`, (err) => {
             if (err) {
                 console.error(err);
             }
