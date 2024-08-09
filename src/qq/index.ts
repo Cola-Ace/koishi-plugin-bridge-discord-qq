@@ -1,0 +1,266 @@
+import { Bot, Context, Dict, h, Session } from "koishi";
+import { getBinary, logger, getDate } from "../utils";
+import { MessageBody, Config, BasicType } from "../config";
+import { v4 as uuidv4 } from 'uuid';
+
+// return stop = false 相当于 break
+
+export default class ProcessorQQ {
+    static async process(elements: h[], session: Session, config: Config, from: BasicType, to: BasicType, ctx: Context, dc_bot: Bot, message_body: MessageBody): Promise<[boolean, string]>{ // stop, reason
+        for (let element of elements){
+            switch (element.type){
+                case "face":{
+                    const [stop, reason] = await this.face(element.children[0].attrs.src, message_body);
+                    if (stop) return [true, reason];
+
+                    break;
+                }
+                case "mface":{
+                    const [stop, reason] = await this.face(element.attrs.url, message_body);
+                    if (stop) return [true, reason];
+
+                    break;
+                }
+                case "file":{
+                    const [stop, reason] = await this.file(element.attrs, config.file_transform, session, message_body);
+                    if (stop) return [true, reason];
+
+                    break;
+                }
+                case "forward":{
+                    await this.forward(config.words_blacklist, to.channel_id, element.attrs.content, dc_bot, to, ctx);
+                    return [true, "done"];
+                }
+                case "img":{
+                    const [stop, reason] = await this.image(element.attrs.src, message_body);
+                    if (stop) return [true, reason];
+
+                    break;
+                }
+                case "json":{
+                    const [stop, reason] = await this.json(element.attrs.data, message_body);
+                    if (stop) return [true, reason];
+
+                    break;
+                }
+                case "text":{
+                    const [stop, reason] = await this.text(config.words_blacklist, element.attrs.content, message_body)
+                    if (stop) return [true, reason];
+
+                    break;
+                }
+                case "video":{
+                    const [stop, reason] = await this.video(element.attrs, message_body);
+                    if (stop) return [true, reason];
+
+                    break;
+                }
+            }
+        }
+
+        return [false, ""];
+    }
+
+    static async face(url: string, message_body: MessageBody): Promise<[boolean, string]>{
+        if (url == "") return [false, ""];
+        const [blob, type] = await getBinary(url);
+        message_body.form.append(`files[${message_body.n}]`, blob, `${uuidv4()}.${type.split("/")[1]}`);
+        message_body.n++;
+        message_body.valid_element = true;
+
+        return [false, ""];
+    }
+
+    static async file(attrs: Dict, file_transform: any, session: Session, message_body: MessageBody): Promise<[boolean, string]>{
+        if (parseInt(attrs.fileSize) > 20971520){ // 20MB
+            message_body.text += "【检测到大小大于20MB的文件，请到QQ下载】";
+            message_body.valid_element = true;
+
+            return [false, ""];
+        }
+
+        if (file_transform === undefined){
+            message_body.text += "【检测到文件，请到QQ下载】";
+            message_body.valid_element = true;
+
+            return [false, ""];
+        }
+        try {
+            const res = await session.onebot.getImage(attrs.fileId);
+            const filename = res["file"].split("/").pop();
+            const [file, type] = await getBinary(`${file_transform.url}/${file_transform.token}/${filename}`);
+            if (file === null){
+                message_body.text += "文件传输失败，请联系管理员";
+                message_body.valid_element = true;
+
+                return [false, ""];
+            }
+
+            message_body.form.append(`files[${message_body.n}]`, file, res["file_name"]);
+            message_body.n++;
+            message_body.valid_element = true;
+        } catch (error){
+            logger.info(error);
+            message_body.text += "文件传输失败，请联系管理员";
+            message_body.valid_element = true;
+        }
+
+        return [false, ""];
+    }
+
+    static async forward(blacklist: Array<string>, channel_id: string, contents: Array<Object>, dc_bot: Bot, to: BasicType, ctx: Context): Promise<void>{
+        const thread = await dc_bot.internal.startThreadWithoutMessage(channel_id, { name: `转发消息 ${getDate()}`, type: 11 });
+        await dc_bot.internal.modifyChannel(thread.id, { locked: true });
+
+        for (let content of contents){
+            let message_body: MessageBody = { text: "", form: new FormData(), n: 0, embed: null, valid_element: false };
+            for (let element of content["message"]){
+                switch (element.type){
+                    case "forward":{
+                        message_body.text += "【检测到嵌套合并转发消息，请前往QQ查看】";
+                        message_body.valid_element = true;
+
+                        break;
+                    }
+                    case "image":{
+                        await this.image(element["data"]["url"], message_body);
+    
+                        break;
+                    }
+                    case "json":{
+                        await this.json(element["data"]["data"], message_body);
+    
+                        break;
+                    }
+                    case "text":{
+                        await this.text(blacklist, element["data"]["text"], message_body)
+    
+                        break;
+                    }
+                }
+            }
+
+            if (!message_body.valid_element) continue;
+
+            // 实现发送消息功能
+            let webhook_url = "";
+            let webhook_id = "";
+            let has_webhook = false;
+            const webhooks_list = await dc_bot.internal.getChannelWebhooks(channel_id);
+
+            for (let webhook of webhooks_list){
+                if (webhook["user"]["id"] == to.self_id && "url" in webhook){
+                    webhook_url = webhook["url"];
+                    webhook_id = webhook["id"];
+                    has_webhook = true;
+                }
+            }
+
+            if (!has_webhook){
+                const webhook = await dc_bot.internal.createWebhook(channel_id, {name: "Bridge"});
+                webhook_url = webhook["url"];
+                webhook_id = webhook["id"];
+            }
+            
+            const payload_json = JSON.stringify({
+                content: message_body.text,
+                username: `[QQ:${content["sender"]["user_id"]}] ${content["sender"]["nickname"]}`,
+                avatar_url: `https://q.qlogo.cn/headimg_dl?dst_uin=${content["sender"]["user_id"]}&spec=640`,
+                embeds: message_body.embed
+            });
+            message_body.form.append("payload_json", payload_json);
+
+            try {
+                await ctx.http.post(`${webhook_url}?wait=true&thread_id=${thread.id}`, message_body.form);
+            } catch (error){
+                logger.error(error);
+            }
+
+            if (!has_webhook){
+                await dc_bot.internal.deleteWebhook(webhook_id);
+            }
+        }
+    }
+
+    static async image(url: string, message_body: MessageBody): Promise<[boolean, string]>{
+        const [blob, type] = await getBinary(url);
+        message_body.form.append(`files[${message_body.n}]`, blob, `${uuidv4()}.${type.split("/")[1]}`);
+        message_body.n++;
+        message_body.valid_element = true;
+
+        return [false, ""];
+    }
+
+    static async json(raw: any, message_body: MessageBody): Promise<[boolean, string]>{
+        const data = JSON.parse(raw);
+        switch (data["app"]){
+            case "com.tencent.structmsg":{
+                let image = {};
+
+                if ("preview" in data["meta"]["news"]) image = { url: data["meta"]["news"]["preview"] };
+
+                message_body.embed = [{
+                    author: {
+                        name: data["meta"]["news"]["title"],
+                    },
+                    description: `${data["meta"]["news"]["desc"]}\n[点我跳转](${data["meta"]["news"]["jumpUrl"]})`,
+                    footer: {
+                        text: data["meta"]["news"]["tag"],
+                        icon_url: data["meta"]["news"]["source_icon"]
+                    },
+                    color: 2605017,
+                    image: image
+                }];
+                message_body.valid_element = true;
+                
+                break;
+            }
+            case "com.tencent.miniapp_01":{
+                let image = {
+                    url: `https://${data["meta"]["detail_1"]["preview"]}`
+                };
+
+                message_body.embed = [{
+                    description: `${data["meta"]["detail_1"]["desc"]}\n[点我跳转](${data["meta"]["detail_1"]["qqdocurl"]})`,
+                    author: {
+                        name: data["meta"]["detail_1"]["title"],
+                        icon_url: data["meta"]["detail_1"]["icon"]
+                    },
+                    color: 2605017,
+                    image: image
+                }]
+                message_body.valid_element = true;
+
+                break;
+            }
+        }
+        return [false, ""];
+    }
+
+    static async text(blacklist: Array<string>, message_content: string, message_body: MessageBody): Promise<[boolean, string]>{
+        for (let word of blacklist){
+            if (message_content.toLowerCase().indexOf(word.toLowerCase()) != -1) return [true, "found blacklist words"];
+        }
+
+        message_body.text += message_content;
+        message_body.valid_element = true;
+
+        return [false, ""];
+    }
+
+    static async video(attrs: Dict, message_body: MessageBody): Promise<[boolean, string]>{
+        if (parseInt(attrs.fileSize) > 20971520){ // 20MB
+            message_body.text += "【检测到大小大于20MB的视频，请到QQ下载】";
+            message_body.valid_element = true;
+
+            return [false, ""];
+        }
+
+        const [file, type] = await getBinary(attrs.url);
+        message_body.form.append(`files[${message_body.n}]`, file, attrs.file);
+        message_body.n++;
+        message_body.valid_element = true;
+
+        return [false, ""];
+    }
+}

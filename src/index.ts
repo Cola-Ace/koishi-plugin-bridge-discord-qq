@@ -1,16 +1,11 @@
 import { Context, h } from 'koishi';
-import { DiscordBot } from '@koishijs/plugin-adapter-discord';
 import {} from 'koishi-plugin-adapter-onebot';
-import { v4 as uuidv4 } from 'uuid';
 import { Config } from './config';
 // import { emit } from 'process';
 
 export * from "./config";
 import { getBinary, convertMsTimestampToISO8601, logger } from './utils';
-
-// h.file 用法:
-// h.file(ArrayBuffer, type)
-// blobToArrayBuffer需使用try catch
+import ProcessorQQ from './qq';
 
 export const name = 'bridge-qq-discord';
 
@@ -49,27 +44,18 @@ export function apply(ctx: Context, config: Config) {
         const message_data = session.event.message;
 
         // 测试用
-        logger.info("-------Message-------");
-        logger.info(message_data);
-        logger.info("-------Sender-------");
-        logger.info(sender);
-        logger.info("-------End--------");
-
+        if (config.debug){
+            logger.info("-------Message-------");
+            logger.info(message_data);
+            logger.info("-------Sender-------");
+            logger.info(sender);
+            logger.info("-------End--------");
+        }
+        
         // 检测是否为QQ文件发送
         let is_qq_file = true;
         if ("id" in message_data) is_qq_file = false;
         if (is_qq_file) return;
-
-        // 测试用代码
-        // if (sender.id == "2591668626" && message_data.content == ".test"){
-        //     let message = h("file", { src: "https://raw.githubusercontent.com/koishijs/koishi-plugin-adapter-onebot/main/.npmignore", title: ".npmignore" });
-        //     const message_id = await session.bot.sendMessage("698656243", message);
-        //     logger.info(message_id);
-        //     await session.bot.sendMessage("698656243", "test");
-        //     logger.info("finish");
-
-        //     return;
-        // }
         
         let nickname = sender.isBot ? sender.name : "member" in session.event ? session.event.member.nick : sender.name; // 判断是否为 bot
 
@@ -77,158 +63,23 @@ export function apply(ctx: Context, config: Config) {
 
         if (elements.length <= 0) return;
         
-        for (let element of config.constant){
-            if (!element.enable) continue;
+        for (let constant of config.constant){
+            if (!constant.enable) continue;
             
-            for (let from of element.from){
+            for (let from of constant.from){
                 if (from.platform == platform && from.self_id == self_id && from.channel_id == channel_id){
-                    for (let to of element.to){
+                    for (let to of constant.to){
                         try {
                             if (to.platform === "discord"){
                                 // QQ -> Discord
-                                let message = ""
-                                let form = new FormData();
-                                let n = 0;
-                                let embed = null;
-
                                 if (nickname === null) nickname = sender.name; // 如果群昵称为空则使用用户名
 
-                                let valid_element = false;
-                                for (let element of elements){
-                                    switch (element.type){
-                                        case "text":{
-                                            for (let word of config.words_blacklist){
-                                                if (element.attrs.content.toLowerCase().indexOf(word.toLowerCase()) != -1) return; // 发现黑名单
-                                            }
-
-                                            message += element.attrs.content;
-                                            valid_element = true;
-
-                                            break;
-                                        }
-                                        case "img":{
-                                            const [blob, type] = await getBinary(element.attrs.src);
-                                            form.append(`files[${n}]`, blob, `${uuidv4()}.${type.split("/")[1]}`);
-                                            n++;
-                                            valid_element = true;
-
-                                            break;
-                                        }
-                                        case "face":{
-                                            const file_url = element.children[0].attrs.src;
-                                            if (file_url === "") break;
-
-                                            const [blob, type] = await getBinary(file_url);
-                                            form.append(`files[${n}]`, blob, `${uuidv4()}.${type.split("/")[1]}`);
-                                            n++;
-                                            valid_element = true;
-
-                                            break;
-                                        }
-                                        case "mface":{
-                                            const file_url = element.attrs.url;
-                                            if (file_url === "") break;
-
-                                            const [blob, type] = await getBinary(file_url);
-                                            form.append(`files[${n}]`, blob, `${uuidv4()}.${type.split("/")[1]}`);
-                                            n++;
-                                            valid_element = true;
-
-                                            break;
-                                        }
-                                        case "forward":{
-                                            // logger.info(element.attrs.id);
-                                            const data = await session.onebot.getForwardMsg(element.attrs.id);
-                                            // logger.info(data);
-                                            message += "【检测到合并转发，请前往qq查看】";
-                                            valid_element = true;
-
-                                            break;
-                                        }
-                                        case "json":{
-                                            // 处理 QQ 卡片类链接
-                                            const data = JSON.parse(element.attrs.data);
-                                            if (data["app"] != "com.tencent.structmsg") break;
-
-                                            let image = {};
-
-                                            if ("preview" in data["meta"]["news"]) image = { url: data["meta"]["news"]["preview"] };
-
-                                            embed = [{
-                                                author: {
-                                                    name: data["meta"]["news"]["title"],
-                                                },
-                                                description: `${data["meta"]["news"]["desc"]}\n[点我跳转](${data["meta"]["news"]["jumpUrl"]})`,
-                                                footer: {
-                                                    text: data["meta"]["news"]["tag"],
-                                                    icon_url: data["meta"]["news"]["source_icon"]
-                                                },
-                                                color: 2605017,
-                                                image: image
-                                            }];
-                                            valid_element = true;
-
-                                            break;
-                                        }
-                                        case "file":{
-                                            if (parseInt(element.attrs.fileSize) > 20971520){ // 20MB
-                                                message += "【检测到大小大于20MB的文件，请到QQ下载】";
-                                                valid_element = true;
-
-                                                break;
-                                            }
-
-                                            if (config.file_transform === undefined){
-                                                message += "【检测到文件，请到QQ下载】";
-                                                valid_element = true;
-
-                                                break;
-                                            }
-                                            try {
-                                                const res = await session.onebot.getImage(element.attrs.fileId);
-                                                const filename = res["file"].split("/").pop();
-                                                const [file, type] = await getBinary(`${config.file_transform.url}/${config.file_transform.token}/${filename}`);
-                                                if (file === null){
-                                                    message += "文件传输失败，请联系管理员";
-                                                    valid_element = true;
-
-                                                    break;
-                                                }
-
-                                                form.append(`files[0]`, file, res["file_name"]);
-                                                valid_element = true;
-                                            } catch (error){
-                                                logger.info(error);
-                                                message += "文件传输失败，请联系管理员";
-                                                valid_element = true;
-                                            }
-
-                                            break;
-                                        }
-                                        case "video":{
-                                            if (parseInt(element.attrs.fileSize) > 20971520){ // 20MB
-                                                message += "【检测到大小大于20MB的视频，请到QQ下载】";
-                                                valid_element = true;
-
-                                                break;
-                                            }
-
-                                            const [file, type] = await getBinary(element.attrs.url);
-                                            form.append("files[0]", file, element.attrs.file);
-                                            valid_element = true;
-
-                                            break;
-                                        }
-                                        default:{
-                                            break;
-                                        }
-                                    }
-                                }
-
-                                if (!valid_element) return;
-
-                                const bot = ctx.bots[`discord:${to.self_id}`];
+                                const dc_bot = ctx.bots[`discord:${to.self_id}`];
                                 
+                                let message_body = { text: "", form: new FormData(), n: 0, embed: null, valid_element: false };
+                                const [stop, reason] = await ProcessorQQ.process(elements, session, config, from, to, ctx, dc_bot, message_body);
+                                if (stop || !message_body.valid_element) return;
+
                                 if ("quote" in message_data){
                                     // 不同平台之间回复 & 同平台之间回复
                                     const diff_platform_quote_message = await ctx.database.get("bridge_message", {
@@ -250,12 +101,12 @@ export function apply(ctx: Context, config: Config) {
 
                                         switch (quote_message["type"]){
                                             case "same":{ // 同平台之间回复
-                                                dc_message = await bot.getMessage(quote_message["data"][0]["to_channel_id"], quote_message["data"][0]["to_message_id"]);
+                                                dc_message = await dc_bot.getMessage(quote_message["data"][0]["to_channel_id"], quote_message["data"][0]["to_message_id"]);
                                                 source = "to";
                                                 break;
                                             }
                                             case "diff":{ // 不同平台之间回复
-                                                dc_message = await bot.getMessage(quote_message["data"][0]["from_channel_id"], quote_message["data"][0]["from_message_id"]);
+                                                dc_message = await dc_bot.getMessage(quote_message["data"][0]["from_channel_id"], quote_message["data"][0]["from_message_id"]);
                                                 source = "from"
                                                 break;
                                             }
@@ -284,7 +135,7 @@ export function apply(ctx: Context, config: Config) {
                                         for (let word of config.words_blacklist){
                                             if (message.toLowerCase().indexOf(word.toLowerCase()) != -1) return; // 发现黑名单
                                         }
-                                        embed = [{
+                                        message_body.embed = [{
                                             author: {
                                                 name: dc_message["user"]["name"],
                                                 icon_url: dc_message["user"]["avatar"]
@@ -299,17 +150,36 @@ export function apply(ctx: Context, config: Config) {
                                 
                                 // 实现发送消息功能
                                 if (nickname === null || nickname === "") nickname = sender.name;
-                                const webhook = await (bot as unknown as DiscordBot).internal.createWebhook(to.channel_id, {name: "Bridge"});
+
+                                let webhook_url = "";
+                                let webhook_id = "";
+                                let has_webhook = false;
+                                const webhooks_list = await dc_bot.internal.getChannelWebhooks(to.channel_id);
+
+                                for (let webhook of webhooks_list){
+                                    if (webhook["user"]["id"] == to.self_id && "url" in webhook){
+                                        webhook_url = webhook["url"];
+                                        webhook_id = webhook["id"];
+                                        has_webhook = true;
+                                    }
+                                }
+
+                                if (!has_webhook){
+                                    const webhook = await dc_bot.internal.createWebhook(to.channel_id, {name: "Bridge"});
+                                    webhook_url = webhook["url"];
+                                    webhook_id = webhook["id"];
+                                }
+                                
                                 const payload_json = JSON.stringify({
-                                    content: message,
+                                    content: message_body.text,
                                     username: `[QQ:${sender.id}] ${nickname}`,
                                     avatar_url: sender.avatar,
-                                    embeds: embed
+                                    embeds: message_body.embed
                                 });
-                                form.append("payload_json", payload_json);
+                                message_body.form.append("payload_json", payload_json);
 
                                 try {
-                                    const res = await ctx.http.post(`${webhook.url}?wait=true`, form);
+                                    const res = await ctx.http.post(`${webhook_url}?wait=true`, message_body.form);
                                     const from_guild_id = await ctx.database.get("channel", {
                                         id: channel_id
                                     });
@@ -334,8 +204,10 @@ export function apply(ctx: Context, config: Config) {
                                     })
                                 } catch (error){
                                     logger.error(error);
-                                } finally {
-                                    await (bot as unknown as DiscordBot).internal.deleteWebhook(webhook.id);
+                                }
+
+                                if (!has_webhook){
+                                    await dc_bot.internal.deleteWebhook(webhook_id);
                                 }
 
                                 continue;

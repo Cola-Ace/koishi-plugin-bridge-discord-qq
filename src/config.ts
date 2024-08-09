@@ -15,6 +15,7 @@ export interface BasicType {
 
 export interface Config {
     words_blacklist: Array<string>,
+    debug: boolean,
     file_transform: any,
     constant?: Array<Constant>
 };
@@ -41,8 +42,17 @@ export interface BridgeMessage {
     onebot_real_message_id: string
 }
 
+export interface MessageBody {
+    text: string,
+    form: FormData,
+    n: number,
+    embed: any,
+    valid_element: boolean,
+}
+
 export const Config: Schema<Config> = Schema.object({
-    words_blacklist: Schema.array(String),
+    words_blacklist: Schema.array(String).description("屏蔽词"),
+    debug: Schema.boolean().description("是否开启debug模式").default(false),
     file_transform: Schema.union([
         Schema.const(null).description("不发送文件"),
         Schema.object({
