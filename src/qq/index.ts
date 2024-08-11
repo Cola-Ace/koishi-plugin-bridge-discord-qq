@@ -28,7 +28,7 @@ export default class ProcessorQQ {
                     break;
                 }
                 case "forward":{
-                    await this.forward(config.words_blacklist, to.channel_id, element.attrs.content, dc_bot, to, ctx);
+                    await this.forward(config.words_blacklist, to.channel_id, element.attrs.content, dc_bot, from, to, ctx);
                     return [true, "done"];
                 }
                 case "img":{
@@ -108,14 +108,20 @@ export default class ProcessorQQ {
         return [false, ""];
     }
 
-    static async forward(blacklist: Array<string>, channel_id: string, contents: Array<Object>, dc_bot: Bot, to: BasicType, ctx: Context): Promise<void>{
+    static async forward(blacklist: Array<string>, channel_id: string, contents: Array<Object>, dc_bot: Bot, from: BasicType, to: BasicType, ctx: Context): Promise<void>{
         const thread = await dc_bot.internal.startThreadWithoutMessage(channel_id, { name: `转发消息 ${getDate()}`, type: 11 });
         await dc_bot.internal.modifyChannel(thread.id, { locked: true });
 
-        for (let content of contents){
+        for (let content of contents){ // 单条消息
             let message_body: MessageBody = { text: "", form: new FormData(), n: 0, embed: null, valid_element: false };
+            let bridge_message = false;
+            let avatar = "";
+            let nickname = "";
+            if (content["sender"]["user_id"] == from.self_id) bridge_message = true;
+
             for (let element of content["message"]){
                 switch (element.type){
+                    // face 和 mface 在转发消息中都为表情名称 (text)
                     case "forward":{
                         message_body.text += "【检测到嵌套合并转发消息，请前往QQ查看】";
                         message_body.valid_element = true;
@@ -123,6 +129,11 @@ export default class ProcessorQQ {
                         break;
                     }
                     case "image":{
+                        if (bridge_message && avatar == ""){
+                            avatar = element["data"]["url"];
+
+                            break;
+                        }
                         await this.image(element["data"]["url"], message_body);
     
                         break;
@@ -133,6 +144,14 @@ export default class ProcessorQQ {
                         break;
                     }
                     case "text":{
+                        if (bridge_message && nickname == ""){
+                            const temp = element["data"]["text"].split(`[Discord${ element["data"]["text"].indexOf("[Discord·TweetShift]") != -1 ? "·TweetShift":""}] `)[1].split(":");
+                            nickname = temp[0];
+                            temp.splice(0, 1)
+                            await this.text(blacklist, temp.join(""), message_body);
+
+                            break;
+                        }
                         await this.text(blacklist, element["data"]["text"], message_body)
     
                         break;
@@ -164,8 +183,8 @@ export default class ProcessorQQ {
             
             const payload_json = JSON.stringify({
                 content: message_body.text,
-                username: `[QQ:${content["sender"]["user_id"]}] ${content["sender"]["nickname"]}`,
-                avatar_url: `https://q.qlogo.cn/headimg_dl?dst_uin=${content["sender"]["user_id"]}&spec=640`,
+                username: nickname == "" ? `[QQ:${content["sender"]["user_id"]}] ${content["sender"]["nickname"]}`:nickname,
+                avatar_url: avatar == "" ? `https://q.qlogo.cn/headimg_dl?dst_uin=${content["sender"]["user_id"]}&spec=640`:avatar,
                 embeds: message_body.embed
             });
             message_body.form.append("payload_json", payload_json);
