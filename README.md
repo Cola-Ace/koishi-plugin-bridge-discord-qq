@@ -17,7 +17,7 @@
 > I just heard back from the team and the rate limit on webhooks is 5 requests every two seconds per webhook ID. This limit is also applied to webhook creation and deletion. Moreover, there is a limit of 30 requests per minute per channel.
 
 # 更新日志
-wait
+test
 
 # 功能列表
 1. QQ
