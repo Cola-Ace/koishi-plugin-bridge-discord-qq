@@ -1,7 +1,6 @@
 import { Context, h } from 'koishi';
 import { } from 'koishi-plugin-adapter-onebot';
 import { Config } from './config';
-// import { emit } from 'process';
 
 export * from "./config";
 import { getBinary, convertMsTimestampToISO8601, logger } from './utils';
@@ -59,16 +58,17 @@ export function apply(ctx: Context, config: Config) {
 
     let nickname = sender.isBot ? sender.name : "member" in session.event ? session.event.member.nick : sender.name; // 判断是否为 bot
 
-    const elements = message_data.elements.filter(element => element.type !== "at"); // 确保没有@格式
+    // const elements = message_data.elements.filter(element => element.type !== "at"); // 确保没有@格式
+    const elements = message_data.elements;
 
     if (elements.length <= 0 && !Object.keys(message_data).includes("quote")) return;
 
-    for (let constant of config.constant) {
+    for (const constant of config.constant) {
       if (!constant.enable) continue;
 
-      for (let from of constant.from) {
+      for (const from of constant.from) {
         if (from.platform == platform && from.self_id == self_id && from.channel_id == channel_id) {
-          for (let to of constant.to) {
+          for (const to of constant.to) {
             try {
               if (to.platform === "discord") {
                 // QQ -> Discord
@@ -114,7 +114,7 @@ export function apply(ctx: Context, config: Config) {
 
                     if (source == "") return;
 
-                    for (let element of dc_message.elements) {
+                    for (const element of dc_message.elements) {
                       switch (element.type) {
                         case "text": {
                           message += element.attrs.content;
@@ -132,7 +132,7 @@ export function apply(ctx: Context, config: Config) {
                         }
                       }
                     }
-                    for (let word of config.words_blacklist) {
+                    for (const word of config.words_blacklist) {
                       if (message.toLowerCase().indexOf(word.toLowerCase()) != -1) return; // 发现黑名单
                     }
                     message_body.embed = [{
@@ -156,7 +156,7 @@ export function apply(ctx: Context, config: Config) {
                 let has_webhook = false;
                 const webhooks_list = await dc_bot.internal.getChannelWebhooks(to.channel_id);
 
-                for (let webhook of webhooks_list) {
+                for (const webhook of webhooks_list) {
                   if (webhook["user"]["id"] == to.self_id && "url" in webhook) {
                     webhook_url = webhook["url"];
                     webhook_id = webhook["id"];
@@ -217,17 +217,26 @@ export function apply(ctx: Context, config: Config) {
               const qqbot = ctx.bots[`${to.platform}:${to.self_id}`];
               const dc_bot = ctx.bots[`discord:${from.self_id}`];
 
-              if (nickname != null && nickname.indexOf("TweetShift") != -1) { // 判断是否为 tweetshift
+              // 处理 Tweetshift
+              if (nickname != null && nickname.indexOf("TweetShift") != -1) {
                 const msg = await dc_bot.internal.getChannelMessage(session.event.channel.id, message_data.id);
 
                 let message = "";
-                message += `${msg["content"]}\n${"description" in msg["embeds"][0] ? msg["embeds"][0]["description"] : ""}`;
+                for (const element of elements){
+                  if (element["type"] == "text"){
+                    message += `${element["attrs"]["content"]}\n===== 以下为推文内容 =====\n`;
+                  }
+                }
+                message += `${"description" in msg["embeds"][0] ? msg["embeds"][0]["description"] : ""}`;
 
-                for (let word of config.words_blacklist) {
+                for (const word of config.words_blacklist) {
                   if (message.toLowerCase().indexOf(word.toLowerCase()) != -1) return; // 发现黑名单
                 }
 
-                for (let embed of msg["embeds"]) {
+                // 处理链接中的日文
+                message = message.replace("/リゼロ", "/%E3%83%AA%E3%82%BC%E3%83%AD").replace("/りゼロ", "/%E3%82%8A%E3%82%BC%E3%83%AD");
+
+                for (const embed of msg["embeds"]) {
                   if ("image" in embed) message += h.image(embed["image"]["url"]);
                 }
 
@@ -259,7 +268,18 @@ export function apply(ctx: Context, config: Config) {
               let message = "";
               let quoted_message_id = null;
 
-              if ("quote" in message_data && message_data.elements.length != 0){
+              if ("quote" in message_data && message_data.content === ""){ // 处理转发消息事件和标注消息事件
+                const data = await dc_bot.internal.getChannelMessage(channel_id, message_data.id);
+
+                if (data.type === 6) return; // 标注消息事件
+
+                const guild_id = await dc_bot.internal.getChannel(message_data.quote.channel.id);
+                const quoted_nick = message_data.quote.user.nick === null ? message_data.quote.user.name : message_data.quote.user.nick;
+
+                message += `===== 转发消息 =====\nhttps://discord.com/channels/${guild_id["guild_id"]}/${message_data.quote.channel.id}/${message_data.quote.id}\n===== 以下为转发内容 =====\n${h.image(`${message_data.quote.user.avatar}?size=64`)}\n${quoted_nick.indexOf("[QQ:") != -1 ? "":"[Discord] "}${quoted_nick}:\n`;
+              }
+
+              if ("quote" in message_data && elements.length != 0){
                 // 不同平台之间回复 & 同平台之间回复
                 const diff_platform_quote_message = await ctx.database.get("bridge_message", {
                   to_message_id: message_data.quote.id,
@@ -270,14 +290,14 @@ export function apply(ctx: Context, config: Config) {
                   from_channel_id: message_data.quote.channel.id
                 });
 
-                let quote_message = diff_platform_quote_message.length != 0 ? diff_platform_quote_message : same_platform_quote_message;
+                const quote_message = diff_platform_quote_message.length != 0 ? diff_platform_quote_message : same_platform_quote_message;
 
                 if (quote_message.length != 0) {
                   quoted_message_id = quote_message[0]["onebot_real_message_id"];
                 }
               }
 
-              for (let element of message_data.elements.length == 0 ? message_data.quote.elements:elements) {
+              for (const element of elements.length == 0 ? message_data.quote.elements:elements) {
                 switch (element.type) {
                   case "text": {
                     for (let word of config.words_blacklist) {
@@ -285,6 +305,13 @@ export function apply(ctx: Context, config: Config) {
                     }
 
                     message += element.attrs.content;
+
+                    break;
+                  }
+
+                  case "at": {
+                    const user_info = await dc_bot.internal.getUser(element.attrs.id);
+                    message += `@${user_info["global_name"] === null ? element.attrs.name : user_info["global_name"]}`;
 
                     break;
                   }
@@ -328,7 +355,8 @@ export function apply(ctx: Context, config: Config) {
                       message += "【检测到大小超过20MB的视频，请到discord查看】"
                       break;
                     }
-                    message += h("video", { src: element.attrs.src });
+
+                    if (element.attrs.src.indexOf("youtube.com") == -1) message += h("video", { src: element.attrs.src });
 
                     break;
                   }
@@ -339,12 +367,14 @@ export function apply(ctx: Context, config: Config) {
                 }
               }
 
-              if (!sender.isBot && message.indexOf("vxtwitter.com") == -1 && (message.indexOf("twitter.com") != -1 || message.indexOf("x.com") != -1)) return; // 避免与机器人转写重复
+              // if (!sender.isBot && message.indexOf("vxtwitter.com") == -1 && (message.indexOf("twitter.com") != -1 || message.indexOf("x.com") != -1)) return; // 避免与机器人转写重复
 
               // 获取 discord 昵称
-              let dc_nick = sender.isBot ? nickname : await dc_bot.internal.getUser(sender.id);
+              // const dc_nick = sender.isBot ? nickname : await dc_bot.internal.getUser(sender.id);
 
-              nickname = nickname === null ? dc_nick["global_name"] : nickname
+              // nickname = nickname === null ? dc_nick["global_name"] : nickname
+              nickname = sender.nick === null ? sender.name : sender.nick;
+
               let retry_count = 0;
               while (1) {
                 try {
