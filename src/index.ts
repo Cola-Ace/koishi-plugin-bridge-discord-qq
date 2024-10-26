@@ -224,10 +224,10 @@ export function apply(ctx: Context, config: Config) {
                 let message = "";
                 for (const element of elements){
                   if (element["type"] == "text"){
-                    message += `${element["attrs"]["content"]}\n===== 以下为推文内容 =====\n`;
+                    message += `${element["attrs"]["content"]}\n`;
                   }
                 }
-                message += `${"description" in msg["embeds"][0] ? msg["embeds"][0]["description"] : ""}`;
+                message += `===== 以下为推文内容 =====\n${"description" in msg["embeds"][0] ? msg["embeds"][0]["description"] : ""}`;
 
                 for (const word of config.words_blacklist) {
                   if (message.toLowerCase().indexOf(word.toLowerCase()) != -1) return; // 发现黑名单
