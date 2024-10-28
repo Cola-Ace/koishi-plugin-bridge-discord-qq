@@ -9,6 +9,13 @@ export default class ProcessorQQ {
   static async process(elements: h[], session: Session, config: Config, from: BasicType, to: BasicType, ctx: Context, dc_bot: Bot, message_body: MessageBody): Promise<[boolean, string]> { // stop, reason
     for (let element of elements) {
       switch (element.type) {
+        case "at":{
+          const [stop, reason] = await this.at(element.attrs.name, message_body);
+          if (stop) return [true, reason];
+
+          break;
+        }
+
         case "face": {
           const [stop, reason] = await this.face(element.children[0].attrs.src, message_body);
           if (stop) return [true, reason];
@@ -61,6 +68,13 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
+  static async at(name: string, message_body: MessageBody): Promise<[boolean, string]> {
+    message_body.text += `\`@${name}\``;
+    message_body.valid_element = true;
+
+    return [false, ""];
+  }
+
   static async face(url: string, message_body: MessageBody): Promise<[boolean, string]> {
     if (url == "") return [false, ""];
     const [blob, type] = await getBinary(url);
@@ -90,7 +104,7 @@ export default class ProcessorQQ {
       const filename = res["file"].split("/").pop();
       const [file, type] = await getBinary(`${file_transform.url}/${file_transform.token}/${filename}`);
       if (file === null) {
-        message_body.text += "文件传输失败，请联系管理员";
+        message_body.text += "【文件传输失败，请联系管理员】";
         message_body.valid_element = true;
 
         return [false, ""];
@@ -101,7 +115,7 @@ export default class ProcessorQQ {
       message_body.valid_element = true;
     } catch (error) {
       logger.info(error);
-      message_body.text += "文件传输失败，请联系管理员";
+      message_body.text += "【文件传输失败，请联系管理员】";
       message_body.valid_element = true;
     }
 

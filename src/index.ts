@@ -5,6 +5,7 @@ import { Config } from './config';
 export * from "./config";
 import { getBinary, convertMsTimestampToISO8601, logger } from './utils';
 import ProcessorQQ from './qq';
+import ProcessorDiscord from './discord';
 
 export const name = 'bridge-qq-discord';
 
@@ -218,33 +219,21 @@ export function apply(ctx: Context, config: Config) {
               const dc_bot = ctx.bots[`discord:${from.self_id}`];
 
               // 处理 Tweetshift
-              if (nickname != null && nickname.indexOf("TweetShift") != -1) {
-                const msg = await dc_bot.internal.getChannelMessage(session.event.channel.id, message_data.id);
+              if (nickname != null && nickname.indexOf("TweetShift") != -1){
+                const [stop, message] = await ProcessorDiscord.processTweetshift(
+                  await dc_bot.internal.getChannelMessage(session.event.channel.id, message_data.id),
+                  elements,
+                  config.words_blacklist
+                );
 
-                let message = "";
-                for (const element of elements){
-                  if (element["type"] == "text"){
-                    message += `${element["attrs"]["content"]}\n`;
-                  }
-                }
-                message += `===== 以下为推文内容 =====\n${"description" in msg["embeds"][0] ? msg["embeds"][0]["description"] : ""}`;
+                if (stop) return;
 
-                for (const word of config.words_blacklist) {
-                  if (message.toLowerCase().indexOf(word.toLowerCase()) != -1) return; // 发现黑名单
-                }
-
-                // 处理链接中的日文
-                message = message.replace("/リゼロ", "/%E3%83%AA%E3%82%BC%E3%83%AD").replace("/りゼロ", "/%E3%82%8A%E3%82%BC%E3%83%AD");
-
-                for (const embed of msg["embeds"]) {
-                  if ("image" in embed) message += h.image(embed["image"]["url"]);
-                }
-
-                const message_id = await qqbot.sendMessage(to.channel_id, `${h.image(msg["embeds"][0]["author"]["icon_url"].replace(".jpg", "_200x200.jpg"))}[Discord·TweetShift] ${msg["embeds"][0]["author"]["name"]}:\n${message}`);
-                const from_guild_id = await ctx.database.get("channel", {
+                // const message_id = await qqbot.sendMessage(to.channel_id, `${h.image(msg["embeds"][0]["author"]["icon_url"].replace(".jpg", "_200x200.jpg"))}[Discord·TweetShift] ${msg["embeds"][0]["author"]["name"]}:\n${message}`);
+                const messageId = await qqbot.sendMessage(to.channel_id, message);
+                const fromGuildId = await ctx.database.get("channel", {
                   id: channel_id
                 });
-                const to_guild_id = await ctx.database.get("channel", {
+                const toGuildId = await ctx.database.get("channel", {
                   id: to.channel_id
                 });
                 await ctx.database.create("bridge_message", {
@@ -252,15 +241,28 @@ export function apply(ctx: Context, config: Config) {
                   from_message_id: message_data.id,
                   from_platform: platform,
                   from_channel_id: channel_id,
-                  from_guild_id: from_guild_id[0]["guildId"],
+                  from_guild_id: fromGuildId[0]["guildId"],
                   from_sender_id: sender.id,
                   from_sender_name: nickname,
-                  to_message_id: message_id[0],
+                  to_message_id: messageId[0],
                   to_platform: "discord",
                   to_channel_id: to.channel_id,
-                  to_guild_id: to_guild_id[0]["guildId"],
-                  onebot_real_message_id: message_id[0]
-                })
+                  to_guild_id: toGuildId[0]["guildId"],
+                  onebot_real_message_id: messageId[0]
+                });
+
+                return;
+              }
+
+              // 处理 Github
+              if (sender.isBot && nickname.indexOf("GitHub") != -1){
+                const msg = await dc_bot.internal.getChannelMessage(session.event.channel.id, message_data.id);
+                const embed = msg["embeds"][0];
+
+                let message = `${h.image(`${embed["author"]["icon_url"]}&size=64`)}[Github] ${embed["author"]["name"]} (${embed["author"]["url"]}):\n${embed["description"]}\n`;
+
+                const desc = embed["description"].split("`]")[0];
+                message += `${desc[0].split("[`")[1]} ${desc[1]}`;
 
                 return;
               }

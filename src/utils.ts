@@ -4,7 +4,7 @@ export const logger = new Logger("bridge");
 export function convertMsTimestampToISO8601(msTimestamp: number): string {
     // 创建一个 Date 对象，传入毫秒级的时间戳
     const date = new Date(msTimestamp);
-  
+
     // 使用 .toISOString() 方法转换为 ISO 8601 格式
     // 注意：此方法返回的是 UTC 时间
     return date.toISOString();
@@ -33,7 +33,7 @@ export async function getBinary(url: string): Promise<[Blob, String] | null> {
             headers: headers,
         });
         if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status} | Response: ${response.text}`);
+            throw new Error(`HTTP error! Status: ${response.status} | Response: ${response.text} | end`);
         }
         return [await response.blob(), response.headers.get("Content-Type")];
     } catch (error) {
