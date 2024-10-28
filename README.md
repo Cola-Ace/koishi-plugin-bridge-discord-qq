@@ -2,6 +2,7 @@
 [![npm](https://img.shields.io/npm/v/koishi-plugin-bridge-qq-discord?style=flat-square)](https://www.npmjs.com/package/koishi-plugin-bridge-qq-discord)
 
 让discord和qq的消息互通
+
 目前为自用插件，现有功能应该能正常使用，如果你需要了解使用这个插件的方法可以联系我
 
 # 注意事项
@@ -17,6 +18,9 @@
 > I just heard back from the team and the rate limit on webhooks is 5 requests every two seconds per webhook ID. This limit is also applied to webhook creation and deletion. Moreover, there is a limit of 30 requests per minute per channel.
 
 # 更新日志
+- 2024.10.28 23:06 (1.5.4):
+  - 修复了 discord 当转发消息含有 `face` 类型的消息时无法正确处理大小的 bug
+
 - 2024.10.28 22:20 (1.5.3):
   - 修复了当 Tweetshift 消息 bridge 过去后 QQ 会错误地将 `)` 识别为链接的一部分的 bug
 

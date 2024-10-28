@@ -255,6 +255,7 @@ export function apply(ctx: Context, config: Config) {
               }
 
               // 处理 Github
+              /*
               if (sender.isBot && nickname.indexOf("GitHub") != -1){
                 const msg = await dc_bot.internal.getChannelMessage(session.event.channel.id, message_data.id);
                 const embed = msg["embeds"][0];
@@ -266,6 +267,7 @@ export function apply(ctx: Context, config: Config) {
 
                 return;
               }
+              */
 
               let message = "";
               let quoted_message_id = null;
@@ -331,7 +333,8 @@ export function apply(ctx: Context, config: Config) {
                   }
 
                   case "face": {
-                    message += h.image(element.children[0].attrs.src);
+                    const src = element.children[0].attrs.src;
+                    message += h.image(`${src}${src.indexOf("?quality=lossless") != -1 ? "&size=44":""}`);
 
                     break;
                   }
