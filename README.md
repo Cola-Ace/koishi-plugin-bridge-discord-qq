@@ -18,8 +18,6 @@
 > I just heard back from the team and the rate limit on webhooks is 5 requests every two seconds per webhook ID. This limit is also applied to webhook creation and deletion. Moreover, there is a limit of 30 requests per minute per channel.
 
 # 更新日志
-test
-
 - 2024.10.28 23:06 (1.5.4):
   - 修复了 discord 当转发消息含有 `face` 类型的消息时无法正确处理大小的 bug
 
