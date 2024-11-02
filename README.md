@@ -6,16 +6,24 @@
 目前为自用插件，现有功能应该能正常使用，如果你需要了解使用这个插件的方法可以联系我
 
 # 注意事项
-该程序在discord上使用webhook发送消息以营造尽可能沉浸的对话，根据 2024.8.20 的 Discord 官方回复，目前webhook存在如下限制：
+1. 该程序在discord上使用webhook发送消息以营造尽可能沉浸的对话，根据 2024.8.20 的 Discord 官方回复，目前webhook存在如下限制：
 
-- 每个Webhook最多可以每2秒发送5个请求
-- 每2秒最多创建或删除5次Webhook
-- 每个频道每分钟最多发送30次请求
+ - 每个Webhook最多可以每2秒发送5个请求
+ - 每2秒最多创建或删除5次Webhook
+ - 每个频道每分钟最多发送30次请求
 
-如果你的消息量超过了官方的限制，那么你很有可能会触发`rate limit`限制，从而导致无法正常发送消息
-以下为官方回复原文：
+    如果你的消息量超过了官方的限制，那么你很有可能会触发`rate limit`限制，从而导致无法正常发送消息
+    以下为官方回复原文：
 
-> I just heard back from the team and the rate limit on webhooks is 5 requests every two seconds per webhook ID. This limit is also applied to webhook creation and deletion. Moreover, there is a limit of 30 requests per minute per channel.
+    > I just heard back from the team and the rate limit on webhooks is 5 requests every two seconds per webhook ID. This limit is also applied to webhook creation and deletion. Moreover, there is a limit of 30 requests per minute per channel.
+
+2. 本插件目前只适配了onebot和discord适配器, 不保证其他适配器能正常使用
+
+# 使用方法
+1. constant添加项目后，在 from 和 to 中分别添加一个项目
+2. 在 from 和 to 中，platform 填入 discord 或者 onebot，频道ID根据不同的平台而定，自身ID则是 bot 的ID，频道ID和自身ID建议使用 koishi 自带的 inspect 插件查看
+3. words_blacklist 为黑名单，黑名单内的词出现在即将发送的消息中时消息将不会被发送
+4. file_transform 配置详见 [本目录下file-transform文件夹](https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/tree/main/file-transform)
 
 # 更新日志
 - 2024.10.28 23:06 (1.5.4):
