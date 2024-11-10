@@ -22,7 +22,7 @@ jobs:
       id: get_version
       run: |
         echo "VERSION=$(node -p \"require\('./package.json'\).version\")" >> $GITHUB_ENV
-        echo $GITHUB_ENV
+        echo $VERSION
     - name: Publish to npm
       run: npm publish
       env:
