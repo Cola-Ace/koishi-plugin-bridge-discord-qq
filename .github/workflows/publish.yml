@@ -9,33 +9,23 @@ jobs:
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: 20
         registry-url: 'https://registry.npmjs.org/'
 
-    - name: Cache Node.js modules
-      uses: actions/cache@v3
-      with:
-        path: |
-          node_modules
-          .npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
-
     - name: Install Dependencies
-      run: npm install
+      run: yarn
 
     - name: Build Project
-      run: npm run build
+      run: yarn build
 
     - name: Get Version from package.json
       id: get_version
-      run: echo "VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_ENV
+      run: echo "VERSION=$(node -p \"require\('./package.json'\).version\")" >> $GITHUB_ENV
 
     - name: Publish to npm
       run: npm publish
