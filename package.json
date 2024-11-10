@@ -8,7 +8,9 @@
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
-    "lib"
+    "lib/",
+    "README.md",
+    "package.json"
   ],
   "license": "MIT",
   "repository": {
