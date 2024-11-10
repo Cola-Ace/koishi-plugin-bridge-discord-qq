@@ -34,7 +34,8 @@
   },
   "dependencies": {
     "koishi-plugin-adapter-onebot": "^6.5.8",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "yakumo": "^1.0.0-beta.18"
   },
   "devDependencies": {
     "@types/uuid": "^10"
