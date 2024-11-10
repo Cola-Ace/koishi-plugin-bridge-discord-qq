@@ -30,8 +30,8 @@
     }
   },
   "scripts": {
-    "tsc": "yakumo tsc",
-    "build": "yakumo esbuild"
+    "build": "atsc -b",
+    "lint": "eslint --ext=ts --cache"
   },
   "dependencies": {
     "atsc": "^2.1.0",
@@ -39,9 +39,9 @@
     "koishi-plugin-adapter-onebot": "^6.5.8",
     "typescript": "^5.5.3",
     "uuid": "^10.0.0",
-    "yakumo": "^0.3.13",
-    "yakumo-esbuild": "^0.3.26",
-    "yakumo-tsc": "^0.3.12"
+    "esbuild": "^0.23.1",
+    "esbuild-register": "^3.5.0",
+    "eslint": "^8.57.0"
   },
   "devDependencies": {
     "@types/uuid": "^10"
