@@ -29,6 +29,9 @@
       "en": "Unite discord and qq"
     }
   },
+  "scripts": {
+    "build": "yakumo build"
+  },
   "dependencies": {
     "koishi-plugin-adapter-onebot": "^6.5.8",
     "uuid": "^10.0.0"
