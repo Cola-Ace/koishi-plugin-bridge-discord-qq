@@ -8,9 +8,7 @@
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
-    "lib/",
-    "README.md",
-    "package.json"
+    "lib"
   ],
   "license": "MIT",
   "repository": {
@@ -31,15 +29,18 @@
       "en": "Unite discord and qq"
     }
   },
-  "scripts": {
-    "tsc": "yakumo tsc",
-    "build": "yakumo esbuild"
-  },
   "dependencies": {
-    "koishi": "^4.18.0",
     "koishi-plugin-adapter-onebot": "^6.5.8",
-    "typescript": "^5.5.3",
     "uuid": "^10.0.0",
+    "@cordisjs/eslint-config": "^1.1.1",
+    "@types/node": "^22.1.0",
+    "atsc": "^2.1.0",
+    "esbuild": "^0.23.1",
+    "esbuild-register": "^3.5.0",
+    "eslint": "^8.57.0",
+    "koishi": "^4.17.12",
+    "typescript": "^5.5.3",
+    "yml-register": "^1.2.5",
     "yakumo": "^0.3.13",
     "yakumo-esbuild": "^0.3.26",
     "yakumo-tsc": "^0.3.12"
