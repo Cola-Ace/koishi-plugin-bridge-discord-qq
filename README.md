@@ -13,6 +13,7 @@
  - 每个频道每分钟最多发送 30 次请求
 
     如果你的消息量超过了官方的限制，那么你很有可能会触发 `rate limit` 限制，从而导致无法正常发送消息
+   
     以下为官方回复原文：
 
     > I just heard back from the team and the rate limit on webhooks is 5 requests every two seconds per webhook ID. This limit is also applied to webhook creation and deletion. Moreover, there is a limit of 30 requests per minute per channel.
@@ -33,6 +34,9 @@
 
 - 2024.10.28 22:20 (1.5.3):
   - 修复了当 Tweetshift 消息 bridge 过去后 QQ 会错误地将 `)` 识别为链接的一部分的 bug
+
+# 待办事项
+- 移除 QQ -> Discord 文件传输时对 `file-transform` 服务的依赖，改为获取直链（为了能做到这一点，请确保你的 `onebot` 客户端支持获取文件直链）
 
 # 功能列表
 1. QQ
