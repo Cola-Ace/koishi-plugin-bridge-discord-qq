@@ -22,7 +22,7 @@ export function getDate(){
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-export async function getBinary(url: string): Promise<[Blob, String] | null> {
+export async function getBinary(url: string): Promise<[Blob, String, String]> {
     try {
         const headers = new Headers({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
@@ -35,9 +35,40 @@ export async function getBinary(url: string): Promise<[Blob, String] | null> {
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status} | Response: ${response.text} | end`);
         }
-        return [await response.blob(), response.headers.get("Content-Type")];
+        return [await response.blob(), response.headers.get("Content-Type"), null];
     } catch (error) {
-        logger.error('Error fetching:', error);
-        return null;
+        return [null, null, error];
     }
+}
+
+// 步骤 1: 将 Blob 转换为 ArrayBuffer
+function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
+// 步骤 2: 将 ArrayBuffer 转换为 Buffer
+function arrayBufferToBuffer(arrayBuffer: ArrayBuffer): Buffer {
+  return Buffer.from(arrayBuffer);
+}
+
+// 步骤 3: 将 Buffer 转换为 Base64
+function bufferToBase64(buffer: Buffer): string {
+  return buffer.toString('base64');
+}
+
+export async function converter(blob: Blob): Promise<String> {
+  try {
+    const arrayBuffer = await blobToArrayBuffer(blob);
+    const buffer = arrayBufferToBuffer(arrayBuffer);
+    const base64 = bufferToBase64(buffer);
+    return base64;
+  } catch (error) {
+    console.error('转换过程中发生错误:', error);
+    throw error;
+  }
 }

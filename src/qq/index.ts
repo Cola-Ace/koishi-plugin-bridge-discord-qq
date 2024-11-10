@@ -29,7 +29,7 @@ export default class ProcessorQQ {
           break;
         }
         case "file": {
-          const [stop, reason] = await this.file(element.attrs, config.file_transform, session, message_body);
+          const [stop, reason] = await this.file(element.attrs, config.discord_file_limit, session, message_body, from.channel_id);
           if (stop) return [true, reason];
 
           break;
@@ -57,7 +57,7 @@ export default class ProcessorQQ {
           break;
         }
         case "video": {
-          const [stop, reason] = await this.video(element.attrs, message_body);
+          const [stop, reason] = await this.video(element.attrs, config.discord_file_limit, message_body);
           if (stop) return [true, reason];
 
           break;
@@ -85,21 +85,22 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async file(attrs: Dict, file_transform: any, session: Session, message_body: MessageBody): Promise<[boolean, string]> {
-    if (parseInt(attrs.fileSize) > 10485760) { // 10MB
-      message_body.text += "【检测到大小大于10MB的文件，请到QQ下载】";
+  static async file(attrs: Dict, discord_file_limit: number, session: Session, message_body: MessageBody, group_id: string): Promise<[boolean, string]> {
+    if (parseInt(attrs.fileSize) > discord_file_limit) {
+      message_body.text += "【检测到大小大于设置上限的文件，请到 QQ 下载】";
       message_body.valid_element = true;
 
       return [false, ""];
     }
 
-    if (file_transform === undefined) {
-      message_body.text += "【检测到文件，请到QQ下载】";
-      message_body.valid_element = true;
+    // if (file_transform === undefined) {
+    //   message_body.text += "【检测到文件，请到 QQ 下载】";
+    //   message_body.valid_element = true;
 
-      return [false, ""];
-    }
+    //   return [false, ""];
+    // }
     try {
+      /* with file-transform service
       const res = await session.onebot.getImage(attrs.fileId);
       const filename = res["file"].split("/").pop();
       const [file, type] = await getBinary(`${file_transform.url}/${file_transform.token}/${filename}`);
@@ -111,6 +112,22 @@ export default class ProcessorQQ {
       }
 
       message_body.form.append(`files[${message_body.n}]`, file, res["file_name"]);
+      message_body.n++;
+      message_body.valid_element = true;
+      */
+
+      const url = await session.onebot.getGroupFileUrl(group_id, attrs.fileId, 102);
+      const filename = attrs.file;
+
+      const [file, type, error] = await getBinary(`${url}${filename}`);
+      if (error != null){
+        message_body.text += "【文件传输失败，请联系管理员】";
+        message_body.valid_element = true;
+
+        return [false, ""];
+      }
+
+      message_body.form.append(`files[${message_body.n}]`, file, filename);
       message_body.n++;
       message_body.valid_element = true;
     } catch (error) {
@@ -137,7 +154,7 @@ export default class ProcessorQQ {
         switch (element.type) {
           // face 和 mface 在转发消息中都为表情名称 (text)
           case "forward": {
-            message_body.text += "【检测到嵌套合并转发消息，请前往QQ查看】";
+            message_body.text += "【检测到嵌套合并转发消息，请前往 QQ 查看】";
             message_body.valid_element = true;
 
             break;
@@ -305,8 +322,8 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async video(attrs: Dict, message_body: MessageBody): Promise<[boolean, string]> {
-    if (parseInt(attrs.fileSize) > 10485760) { // 10MB
+  static async video(attrs: Dict, discord_file_limit: number, message_body: MessageBody): Promise<[boolean, string]> {
+    if (parseInt(attrs.fileSize) > discord_file_limit) {
       message_body.text += "【检测到大小大于10MB的视频，请到QQ下载】";
       message_body.valid_element = true;
 

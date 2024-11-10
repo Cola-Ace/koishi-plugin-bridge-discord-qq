@@ -3,7 +3,7 @@ import { } from 'koishi-plugin-adapter-onebot';
 import { Config } from './config';
 
 export * from "./config";
-import { getBinary, convertMsTimestampToISO8601, logger } from './utils';
+import { getBinary, convertMsTimestampToISO8601, logger, converter } from './utils';
 import ProcessorQQ from './qq';
 import ProcessorDiscord from './discord';
 
@@ -254,21 +254,6 @@ export function apply(ctx: Context, config: Config) {
                 return;
               }
 
-              // 处理 Github
-              /*
-              if (sender.isBot && nickname.indexOf("GitHub") != -1){
-                const msg = await dc_bot.internal.getChannelMessage(session.event.channel.id, message_data.id);
-                const embed = msg["embeds"][0];
-
-                let message = `${h.image(`${embed["author"]["icon_url"]}&size=64`)}[Github] ${embed["author"]["name"]} (${embed["author"]["url"]}):\n${embed["description"]}\n`;
-
-                const desc = embed["description"].split("`]")[0];
-                message += `${desc[0].split("[`")[1]} ${desc[1]}`;
-
-                return;
-              }
-              */
-
               let message = "";
               let quoted_message_id = null;
 
@@ -340,24 +325,24 @@ export function apply(ctx: Context, config: Config) {
                   }
 
                   case "file": {
-                    if (parseInt(element.attrs.size) > 20971520) { // 20MB
-                      message += "【检测到大小超过20MB的文件，请到discord查看】"
+                    if (parseInt(element.attrs.size) > config.qq_file_limit) {
+                      message += "【检测到大小超过设置上限的文件，请到 discord 查看】"
                       break;
                     }
-                    const output = await qqbot.internal.downloadFile(element.attrs.src);
+                    const path = await qqbot.internal.downloadFile(element.attrs.src);
 
-                    await qqbot.internal.uploadGroupFile(to.channel_id, output, element.attrs.file);
+                    await qqbot.internal.uploadGroupFile(to.channel_id, path, element.attrs.file);
 
-                    if (config.file_transform != undefined) {
-                      await getBinary(`${config.file_transform.url}/${config.file_transform.token}/${output.split("/").pop()}`); // 删除文件
-                    }
+                    // if (config.file_transform != undefined) {
+                    //   await getBinary(`${config.file_transform.url}/${config.file_transform.token}/${output.split("/").pop()}`); // 删除文件
+                    // }
 
                     break;
                   }
 
                   case "video": {
-                    if (parseInt(element.attrs.size) > 20971520) { // 20MB
-                      message += "【检测到大小超过20MB的视频，请到discord查看】"
+                    if (parseInt(element.attrs.size) > config.qq_file_limit) {
+                      message += "【检测到大小超过设置上限的视频，请到 discord 查看】"
                       break;
                     }
 

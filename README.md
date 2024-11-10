@@ -13,7 +13,7 @@
  - 每个频道每分钟最多发送 30 次请求
 
     如果你的消息量超过了官方的限制，那么你很有可能会触发 `rate limit` 限制，从而导致无法正常发送消息
-   
+
     以下为官方回复原文：
 
     > I just heard back from the team and the rate limit on webhooks is 5 requests every two seconds per webhook ID. This limit is also applied to webhook creation and deletion. Moreover, there is a limit of 30 requests per minute per channel.
@@ -26,17 +26,9 @@
 1. constant 添加项目后，在 from 和 to 中分别添加一个项目
 2. 在 from 和 to 中，platform 填入 discord 或者 onebot，频道ID根据不同的平台而定，自身ID则是 bot 的ID，频道ID和自身ID建议使用 koishi 自带的 inspect 插件查看
 3. words_blacklist 为黑名单，黑名单内的词出现在即将发送的消息中时消息将不会被发送
-4. file_transform 配置详见 [本目录下 file-transform 文件夹](https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/tree/main/file-transform)
-
-# 更新日志
-- 2024.10.28 23:06 (1.5.4):
-  - 修复了 discord 当转发消息含有 `face` 类型的消息时无法正确处理大小的 bug
-
-- 2024.10.28 22:20 (1.5.3):
-  - 修复了当 Tweetshift 消息 bridge 过去后 QQ 会错误地将 `)` 识别为链接的一部分的 bug
 
 # 待办事项
-- 移除 QQ -> Discord 文件传输时对 `file-transform` 服务的依赖，改为获取直链（为了能做到这一点，请确保你的 `onebot` 客户端支持获取文件直链）
+- 优化代码
 
 # 功能列表
 1. QQ
