@@ -30,6 +30,7 @@
     }
   },
   "scripts": {
+    "tsc": "yakumo tsc",
     "build": "yakumo esbuild"
   },
   "dependencies": {
