@@ -29,6 +29,10 @@
       "en": "Unite discord and qq"
     }
   },
+  "script": {
+    "tsc": "yakumo tsc",
+    "build": "yakumo esbuild"
+  },
   "dependencies": {
     "koishi-plugin-adapter-onebot": "^6.5.8",
     "uuid": "^10.0.0",
