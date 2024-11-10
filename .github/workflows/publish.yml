@@ -3,6 +3,11 @@ name: Publish
 on:
   workflow_dispatch:
   push:
+    paths:
+      - 'package.json'
+  pull_request:
+    paths:
+      - 'package.json'
 
 jobs:
   build-and-publish:
