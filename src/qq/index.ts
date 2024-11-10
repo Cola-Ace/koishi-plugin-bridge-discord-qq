@@ -324,7 +324,7 @@ export default class ProcessorQQ {
 
   static async video(attrs: Dict, discord_file_limit: number, message_body: MessageBody): Promise<[boolean, string]> {
     if (parseInt(attrs.fileSize) > discord_file_limit) {
-      message_body.text += "【检测到大小大于10MB的视频，请到QQ下载】";
+      message_body.text += "【检测到大小大于设置上限的视频，请到 QQ 下载】";
       message_body.valid_element = true;
 
       return [false, ""];

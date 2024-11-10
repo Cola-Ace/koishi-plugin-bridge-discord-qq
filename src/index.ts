@@ -3,7 +3,7 @@ import { } from 'koishi-plugin-adapter-onebot';
 import { Config } from './config';
 
 export * from "./config";
-import { getBinary, convertMsTimestampToISO8601, logger, converter } from './utils';
+import { convertMsTimestampToISO8601, logger } from './utils';
 import ProcessorQQ from './qq';
 import ProcessorDiscord from './discord';
 
@@ -97,23 +97,21 @@ export function apply(ctx: Context, config: Config) {
                   if (quote_message.data.length != 0) {
                     let message = "";
                     let image = {};
-                    let dc_message = null;
                     let source = "";
 
                     switch (quote_message["type"]) {
                       case "same": { // 同平台之间回复
-                        dc_message = await dc_bot.getMessage(quote_message["data"][0]["to_channel_id"], quote_message["data"][0]["to_message_id"]);
                         source = "to";
                         break;
                       }
                       case "diff": { // 不同平台之间回复
-                        dc_message = await dc_bot.getMessage(quote_message["data"][0]["from_channel_id"], quote_message["data"][0]["from_message_id"]);
                         source = "from"
                         break;
                       }
                     }
-
                     if (source == "") return;
+
+                    const dc_message = await dc_bot.getMessage(quote_message["data"][0][`${source}_channel_id`], quote_message["data"][0][`${source}_message_id`]);
 
                     for (const element of dc_message.elements) {
                       switch (element.type) {
@@ -350,19 +348,9 @@ export function apply(ctx: Context, config: Config) {
 
                     break;
                   }
-
-                  default: {
-                    break;
-                  }
                 }
               }
 
-              // if (!sender.isBot && message.indexOf("vxtwitter.com") == -1 && (message.indexOf("twitter.com") != -1 || message.indexOf("x.com") != -1)) return; // 避免与机器人转写重复
-
-              // 获取 discord 昵称
-              // const dc_nick = sender.isBot ? nickname : await dc_bot.internal.getUser(sender.id);
-
-              // nickname = nickname === null ? dc_nick["global_name"] : nickname
               nickname = sender.nick === null ? sender.name : sender.nick;
 
               let retry_count = 0;
