@@ -70,7 +70,7 @@ export default class ProcessorQQ {
 
   static async at(name: string, message_body: MessageBody): Promise<[boolean, string]> {
     message_body.text += `\`@${name}\``;
-    message_body.valid_element = true;
+    message_body.validElement = true;
 
     return [false, ""];
   }
@@ -80,7 +80,7 @@ export default class ProcessorQQ {
     const [blob, type] = await getBinary(url);
     message_body.form.append(`files[${message_body.n}]`, blob, `${uuidv4()}.${type.split("/")[1]}`);
     message_body.n++;
-    message_body.valid_element = true;
+    message_body.validElement = true;
 
     return [false, ""];
   }
@@ -88,7 +88,7 @@ export default class ProcessorQQ {
   static async file(attrs: Dict, discord_file_limit: number, session: Session, message_body: MessageBody, group_id: string): Promise<[boolean, string]> {
     if (parseInt(attrs.fileSize) > discord_file_limit) {
       message_body.text += "【检测到大小大于设置上限的文件，请到 QQ 下载】";
-      message_body.valid_element = true;
+      message_body.validElement = true;
 
       return [false, ""];
     }
@@ -122,18 +122,20 @@ export default class ProcessorQQ {
       const [file, type, error] = await getBinary(`${url}${filename}`);
       if (error != null){
         message_body.text += "【文件传输失败，请联系管理员】";
-        message_body.valid_element = true;
+        message_body.validElement = true;
 
         return [false, ""];
       }
 
       message_body.form.append(`files[${message_body.n}]`, file, filename);
       message_body.n++;
-      message_body.valid_element = true;
+      message_body.validElement = true;
+      message_body.hasFile = true;
+      message_body.text += "【检测到文件，若没有收到请前往q群查看】";
     } catch (error) {
       logger.info(error);
       message_body.text += "【文件传输失败，请联系管理员】";
-      message_body.valid_element = true;
+      message_body.validElement = true;
     }
 
     return [false, ""];
@@ -144,7 +146,7 @@ export default class ProcessorQQ {
     await dc_bot.internal.modifyChannel(thread.id, { locked: true });
 
     for (let content of contents) { // 单条消息
-      let message_body: MessageBody = { text: "", form: new FormData(), n: 0, embed: null, valid_element: false };
+      let message_body: MessageBody = { text: "", form: new FormData(), n: 0, embed: null, validElement: false, hasFile: false };
       let bridge_message = false;
       let avatar = "";
       let nickname = "";
@@ -155,7 +157,7 @@ export default class ProcessorQQ {
           // face 和 mface 在转发消息中都为表情名称 (text)
           case "forward": {
             message_body.text += "【检测到嵌套合并转发消息，请前往 QQ 查看】";
-            message_body.valid_element = true;
+            message_body.validElement = true;
 
             break;
           }
@@ -190,7 +192,7 @@ export default class ProcessorQQ {
         }
       }
 
-      if (!message_body.valid_element) continue;
+      if (!message_body.validElement) continue;
 
       // 实现发送消息功能
       let webhook_url = "";
@@ -236,7 +238,7 @@ export default class ProcessorQQ {
     const [blob, type] = await getBinary(url);
     message_body.form.append(`files[${message_body.n}]`, blob, `${uuidv4()}.${type.split("/")[1]}`);
     message_body.n++;
-    message_body.valid_element = true;
+    message_body.validElement = true;
 
     return [false, ""];
   }
@@ -261,7 +263,7 @@ export default class ProcessorQQ {
           color: 2605017,
           image: image
         }];
-        message_body.valid_element = true;
+        message_body.validElement = true;
 
         break;
       }
@@ -279,7 +281,7 @@ export default class ProcessorQQ {
           color: 2605017,
           image: image
         }];
-        message_body.valid_element = true;
+        message_body.validElement = true;
 
         break;
       }
@@ -303,7 +305,7 @@ export default class ProcessorQQ {
           color: 2605017,
           image: image
         }];
-        message_body.valid_element = true;
+        message_body.validElement = true;
 
         break;
       }
@@ -317,7 +319,7 @@ export default class ProcessorQQ {
     }
 
     message_body.text += message_content;
-    message_body.valid_element = true;
+    message_body.validElement = true;
 
     return [false, ""];
   }
@@ -325,7 +327,7 @@ export default class ProcessorQQ {
   static async video(attrs: Dict, discord_file_limit: number, message_body: MessageBody): Promise<[boolean, string]> {
     if (parseInt(attrs.fileSize) > discord_file_limit) {
       message_body.text += "【检测到大小大于设置上限的视频，请到 QQ 下载】";
-      message_body.valid_element = true;
+      message_body.validElement = true;
 
       return [false, ""];
     }
@@ -333,7 +335,9 @@ export default class ProcessorQQ {
     const [file, type] = await getBinary(attrs.url);
     message_body.form.append(`files[${message_body.n}]`, file, attrs.file);
     message_body.n++;
-    message_body.valid_element = true;
+    message_body.validElement = true;
+    message_body.hasFile = true;
+    message_body.text += "【检测到文件，若没有收到请前往q群查看】";
 
     return [false, ""];
   }

@@ -77,9 +77,9 @@ export function apply(ctx: Context, config: Config) {
 
                 const dc_bot = ctx.bots[`discord:${to.self_id}`];
 
-                let message_body = { text: "", form: new FormData(), n: 0, embed: null, valid_element: false };
+                let message_body = { text: "", form: new FormData(), n: 0, embed: null, validElement: false, hasFile: false };
                 const [stop, reason] = await ProcessorQQ.process(elements, session, config, from, to, ctx, dc_bot, message_body);
-                if (stop || !message_body.valid_element) return;
+                if (stop || !message_body.validElement) return;
 
                 if ("quote" in message_data) {
                   // 不同平台之间回复 & 同平台之间回复
@@ -152,18 +152,18 @@ export function apply(ctx: Context, config: Config) {
 
                 let webhook_url = "";
                 let webhook_id = "";
-                let has_webhook = false;
+                let hasWebhook = false;
                 const webhooks_list = await dc_bot.internal.getChannelWebhooks(to.channel_id);
 
                 for (const webhook of webhooks_list) {
                   if (webhook["user"]["id"] == to.self_id && "url" in webhook) {
                     webhook_url = webhook["url"];
                     webhook_id = webhook["id"];
-                    has_webhook = true;
+                    hasWebhook = true;
                   }
                 }
 
-                if (!has_webhook) {
+                if (!hasWebhook) {
                   const webhook = await dc_bot.internal.createWebhook(to.channel_id, { name: "Bridge" });
                   webhook_url = webhook["url"];
                   webhook_id = webhook["id"];
@@ -203,9 +203,18 @@ export function apply(ctx: Context, config: Config) {
                   })
                 } catch (error) {
                   logger.error(error);
+
+                  // 确保文件传输失败时能发送通知
+                  if (message_body.hasFile){
+                    for (let i = 0; i < message_body.n; i++){
+                      message_body.form.delete(`files[${i}]`);
+                    }
+
+                    await ctx.http.post(`${webhook_url}?wait=true`, message_body.form);
+                  }
                 }
 
-                if (!has_webhook) {
+                if (!hasWebhook) {
                   await dc_bot.internal.deleteWebhook(webhook_id);
                 }
 

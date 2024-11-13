@@ -49,7 +49,8 @@ export interface MessageBody {
     form: FormData,
     n: number,
     embed: any,
-    valid_element: boolean,
+    validElement: boolean,
+    hasFile: boolean
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -57,7 +58,7 @@ export const Config: Schema<Config> = Schema.object({
     debug: Schema.boolean().description("是否开启debug模式").default(false),
     download_threads: Schema.number().description("下载文件时的默认线程数").default(4),
     qq_file_limit: Schema.number().description("QQ文件上传大小上限，单位为字节").default(20971520),
-    discord_file_limit: Schema.number().description("Discord文件上传大小上限，单位为字节（该选项不应设置太高，避免超过 discord 本身的限制）").default(10485760),
+    discord_file_limit: Schema.number().description("Discord文件上传大小上限，单位为字节（该选项不应设置太高，避免超过 discord 本身的限制）").default(10485760).max(26214400),
     constant: Schema.array(Schema.object({
         enable: Schema.boolean().description("是否启用").default(true),
         note: Schema.string().description("备注"),
