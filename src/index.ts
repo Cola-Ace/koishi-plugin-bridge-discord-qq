@@ -85,11 +85,11 @@ export function apply(ctx: Context, config: Config) {
                   // 不同平台之间回复 & 同平台之间回复
                   const diff_platform_quote_message = await ctx.database.get("bridge_message", {
                     to_message_id: message_data.quote.id,
-                    to_channel_id: message_data.quote.channel.id
+                    to_channel_id: channel_id
                   })
                   const same_platform_quote_message = await ctx.database.get("bridge_message", {
                     from_message_id: message_data.quote.id,
-                    from_channel_id: message_data.quote.channel.id
+                    from_channel_id: channel_id
                   });
 
                   let quote_message = { type: diff_platform_quote_message.length != 0 ? "diff" : "same", data: diff_platform_quote_message.length != 0 ? diff_platform_quote_message : same_platform_quote_message };
@@ -132,7 +132,7 @@ export function apply(ctx: Context, config: Config) {
                       }
                     }
                     for (const word of config.words_blacklist) {
-                      if (message.toLowerCase().indexOf(word.toLowerCase()) != -1) return; // 发现黑名单
+                      if (message.toLowerCase().indexOf(word.toLowerCase()) != -1) return; // 黑名单检测
                     }
                     message_body.embed = [{
                       author: {
@@ -333,7 +333,7 @@ export function apply(ctx: Context, config: Config) {
 
                   case "file": {
                     if (parseInt(element.attrs.size) > config.qq_file_limit) {
-                      message += "【检测到大小超过设置上限的文件，请到 discord 查看】"
+                      message += "【检测到大小超过设置上限的文件，请到 Discord 查看】"
                       break;
                     }
                     const path = await qqbot.internal.downloadFile(element.attrs.src);
@@ -349,7 +349,7 @@ export function apply(ctx: Context, config: Config) {
 
                   case "video": {
                     if (parseInt(element.attrs.size) > config.qq_file_limit) {
-                      message += "【检测到大小超过设置上限的视频，请到 discord 查看】"
+                      message += "【检测到大小超过设置上限的视频，请到 Discord 查看】"
                       break;
                     }
 
@@ -383,7 +383,7 @@ export function apply(ctx: Context, config: Config) {
                       from_sender_id: sender.id,
                       from_sender_name: nickname,
                       to_message_id: message_id[0],
-                      to_platform: "discord",
+                      to_platform: "onebot",
                       to_channel_id: to.channel_id,
                       to_guild_id: to_guild_id[0]["guildId"],
                       onebot_real_message_id: message_id[0]

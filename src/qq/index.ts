@@ -69,7 +69,7 @@ export default class ProcessorQQ {
   }
 
   static async at(name: string, message_body: MessageBody): Promise<[boolean, string]> {
-    message_body.text += `\`@${name}\``;
+    message_body.text += `\`${name.indexOf("@") == -1 ? "@":""}${name}\``;
     message_body.validElement = true;
 
     return [false, ""];
@@ -337,7 +337,7 @@ export default class ProcessorQQ {
     message_body.n++;
     message_body.validElement = true;
     message_body.hasFile = true;
-    message_body.text += "【检测到文件，若没有收到请前往q群查看】";
+    message_body.text += "【检测到文件，若没有收到请前往 QQ 查看】";
 
     return [false, ""];
   }

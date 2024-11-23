@@ -3,7 +3,7 @@
 
 让 discord 和 qq 的消息互通
 
-目前为自用插件，现有功能应该能正常使用，如果你需要了解使用这个插件的方法可以联系我
+目前为自用插件，现有功能应该能正常使用，如果你需要进一步了解使用这个插件的方法可以联系我
 
 # 注意事项
 1. 该程序在 discord 上使用 webhook 发送消息以营造尽可能沉浸的对话，根据 2024.8.20 的 Discord 官方回复，目前 webhook 存在如下限制：
@@ -19,8 +19,8 @@
     > I just heard back from the team and the rate limit on webhooks is 5 requests every two seconds per webhook ID. This limit is also applied to webhook creation and deletion. Moreover, there is a limit of 30 requests per minute per channel.
 
 2. 本插件目前只适配了 onebot 和 discord 适配器, 不保证其他适配器能正常使用
-
-3. 确保你的 onebot 协议能最大程度地支持 `go-cqhttp` 的扩展 API
+3. 确保你的 onebot 协议端能最大程度地支持 [go-cqhttp API](https://docs.go-cqhttp.org/api) 的扩展 API
+4. 本插件基于 [NapCat](https://github.com/NapNeko/NapCatQQ) 提供的 [OneBot v11](https://github.com/botuniverse/onebot-11) 和 [go-cqhttp API](https://docs.go-cqhttp.org/api) 协议开发
 
 # 使用方法
 1. constant 添加项目后，在 from 和 to 中分别添加一个项目
