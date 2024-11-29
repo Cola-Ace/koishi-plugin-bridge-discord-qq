@@ -225,6 +225,7 @@ export function apply(ctx: Context, config: Config) {
               const qqbot = ctx.bots[`${to.platform}:${to.self_id}`];
               const dc_bot = ctx.bots[`discord:${from.self_id}`];
 
+              if (nickname != null && nickname.indexOf("TweetShift") != -1) return;
               // 处理 Tweetshift
               /*
               if (nickname != null && nickname.indexOf("TweetShift") != -1){
