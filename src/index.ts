@@ -226,6 +226,7 @@ export function apply(ctx: Context, config: Config) {
               const dc_bot = ctx.bots[`discord:${from.self_id}`];
 
               // 处理 Tweetshift
+              /*
               if (nickname != null && nickname.indexOf("TweetShift") != -1){
                 const [stop, message] = await ProcessorDiscord.processTweetshift(
                   await dc_bot.internal.getChannelMessage(session.event.channel.id, message_data.id),
@@ -260,6 +261,7 @@ export function apply(ctx: Context, config: Config) {
 
                 return;
               }
+              */
 
               let message = "";
               let quoted_message_id = null;
