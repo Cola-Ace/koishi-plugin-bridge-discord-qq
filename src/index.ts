@@ -108,6 +108,9 @@ export function apply(ctx: Context, config: Config) {
                         source = "from"
                         break;
                       }
+                      default: {
+                        break;
+                      }
                     }
                     if (source === "") return;
 
@@ -127,6 +130,9 @@ export function apply(ctx: Context, config: Config) {
                         }
                         case "face": {
                           message += h.image(element.children[0].attrs.src);
+                          break;
+                        }
+                        default: {
                           break;
                         }
                       }
@@ -362,6 +368,10 @@ export function apply(ctx: Context, config: Config) {
 
                     if (element.attrs.src.indexOf("youtube.com") === -1) message += h("video", { src: element.attrs.src });
 
+                    break;
+                  }
+
+                  default: {
                     break;
                   }
                 }
