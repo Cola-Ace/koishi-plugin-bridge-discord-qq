@@ -308,7 +308,10 @@ export function apply(ctx: Context, config: Config) {
 
                   case "at": {
                     // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/4
-                    if (element.attrs.type === "all") break;
+                    if (element.attrs.type === "all"){
+                      message += "@everyone ";
+                      break;
+                    }
 
                     const user_info = await dc_bot.internal.getUser(element.attrs.id);
                     message += `@${user_info["global_name"] === null ? element.attrs.name : user_info["global_name"]}`;

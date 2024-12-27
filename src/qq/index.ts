@@ -11,7 +11,11 @@ export default class ProcessorQQ {
       switch (element.type) {
         case "at":{
           // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/4
-          if (element.attrs.type === "all") return [true, ""];
+          if (element.attrs.type === "all"){
+            message_body.text += "@全体成员";
+            message_body.validElement = true;
+            return [false, ""];
+          }
 
           const [stop, reason] = this.at(element.attrs.name, message_body);
           if (stop) return [true, reason];
@@ -72,7 +76,6 @@ export default class ProcessorQQ {
   }
 
   static at(name: string, message_body: MessageBody): [boolean, string] {
-
     message_body.text += `\`${name.indexOf("@") === -1 ? "@":""}${name}\``;
     message_body.validElement = true;
 
