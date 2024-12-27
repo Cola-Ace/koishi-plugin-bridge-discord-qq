@@ -33,7 +33,7 @@ export function apply(ctx: Context, config: Config) {
 
   ctx.on("message", async (session) => {
     const sender = session.event.user;
-    if (sender.id == session.bot.selfId) return; // 避免回环
+    if (sender.id === session.bot.selfId) return; // 避免回环
 
     const pattern = /\[QQ:\d+\]/;
     if (pattern.test(sender.name)) return; // 不转发自己消息
@@ -68,7 +68,7 @@ export function apply(ctx: Context, config: Config) {
       if (!constant.enable) continue;
 
       for (const from of constant.from) {
-        if (from.platform == platform && from.self_id == self_id && from.channel_id == channel_id) {
+        if (from.platform === platform && from.self_id === self_id && from.channel_id === channel_id) {
           for (const to of constant.to) {
             try {
               if (to.platform === "discord") {
@@ -92,9 +92,9 @@ export function apply(ctx: Context, config: Config) {
                     from_channel_id: channel_id
                   });
 
-                  let quote_message = { type: diff_platform_quote_message.length != 0 ? "diff" : "same", data: diff_platform_quote_message.length != 0 ? diff_platform_quote_message : same_platform_quote_message };
+                  let quote_message = { type: diff_platform_quote_message.length !== 0 ? "diff" : "same", data: diff_platform_quote_message.length !== 0 ? diff_platform_quote_message : same_platform_quote_message };
 
-                  if (quote_message.data.length != 0) {
+                  if (quote_message.data.length !== 0) {
                     let message = "";
                     let image = {};
                     let source = "";
@@ -109,7 +109,7 @@ export function apply(ctx: Context, config: Config) {
                         break;
                       }
                     }
-                    if (source == "") return;
+                    if (source === "") return;
 
                     const dc_message = await dc_bot.getMessage(quote_message["data"][0][`${source}_channel_id`], quote_message["data"][0][`${source}_message_id`]);
 
@@ -132,7 +132,7 @@ export function apply(ctx: Context, config: Config) {
                       }
                     }
                     for (const word of config.words_blacklist) {
-                      if (message.toLowerCase().indexOf(word.toLowerCase()) != -1) return; // 黑名单检测
+                      if (message.toLowerCase().indexOf(word.toLowerCase()) !== -1) return; // 黑名单检测
                     }
                     message_body.embed = [{
                       author: {
@@ -142,7 +142,7 @@ export function apply(ctx: Context, config: Config) {
                       timestamp: convertMsTimestampToISO8601(Number(quote_message["data"][0]["timestamp"])),
                       description: `${message}\n\n[[ ↑ ]](https://discord.com/channels/${quote_message["data"][0][`${source}_guild_id`]}/${quote_message["data"][0][`${source}_channel_id`]}/${dc_message.id})`,
                       color: 2605017,
-                      image: image
+                      image
                     }]
                   }
                 }
@@ -156,7 +156,7 @@ export function apply(ctx: Context, config: Config) {
                 const webhooks_list = await dc_bot.internal.getChannelWebhooks(to.channel_id);
 
                 for (const webhook of webhooks_list) {
-                  if (webhook["user"]["id"] == to.self_id && "url" in webhook) {
+                  if (webhook["user"]["id"] === to.self_id && "url" in webhook) {
                     webhook_url = webhook["url"];
                     webhook_id = webhook["id"];
                     hasWebhook = true;
@@ -225,11 +225,10 @@ export function apply(ctx: Context, config: Config) {
               const qqbot = ctx.bots[`${to.platform}:${to.self_id}`];
               const dc_bot = ctx.bots[`discord:${from.self_id}`];
 
-              if (nickname != null && nickname.indexOf("TweetShift") != -1) return;
+              if (nickname !== null && nickname.indexOf("TweetShift") !== -1) return;
               // 处理 Tweetshift
-              /*
-              if (nickname != null && nickname.indexOf("TweetShift") != -1){
-                const [stop, message] = await ProcessorDiscord.processTweetshift(
+              if (nickname !== null && nickname.indexOf("TweetShift") !== -1){
+                const [stop, message] = ProcessorDiscord.processTweetshift(
                   await dc_bot.internal.getChannelMessage(session.event.channel.id, message_data.id),
                   elements,
                   config.words_blacklist
@@ -237,7 +236,7 @@ export function apply(ctx: Context, config: Config) {
 
                 if (stop) return;
 
-                // const message_id = await qqbot.sendMessage(to.channel_id, `${h.image(msg["embeds"][0]["author"]["icon_url"].replace(".jpg", "_200x200.jpg"))}[Discord·TweetShift] ${msg["embeds"][0]["author"]["name"]}:\n${message}`);
+                // const messageId = await qqbot.sendMessage(to.channel_id, `${h.image(msg["embeds"][0]["author"]["icon_url"].replace(".jpg", "_200x200.jpg"))}[Discord·TweetShift] ${msg["embeds"][0]["author"]["name"]}:\n${message}`);
                 const messageId = await qqbot.sendMessage(to.channel_id, message);
                 const fromGuildId = await ctx.database.get("channel", {
                   id: channel_id
@@ -262,7 +261,6 @@ export function apply(ctx: Context, config: Config) {
 
                 return;
               }
-              */
 
               let message = "";
               let quoted_message_id = null;
@@ -275,10 +273,10 @@ export function apply(ctx: Context, config: Config) {
                 const guild_id = await dc_bot.internal.getChannel(message_data.quote.channel.id);
                 const quoted_nick = message_data.quote.user.nick === null ? message_data.quote.user.name : message_data.quote.user.nick;
 
-                message += `===== 转发消息 =====\nhttps://discord.com/channels/${guild_id["guild_id"]}/${message_data.quote.channel.id}/${message_data.quote.id}\n===== 以下为转发内容 =====\n${h.image(`${message_data.quote.user.avatar}?size=64`)}\n${quoted_nick.indexOf("[QQ:") != -1 ? "":"[Discord] "}${quoted_nick}:\n`;
+                message += `===== 转发消息 =====\nhttps://discord.com/channels/${guild_id["guild_id"]}/${message_data.quote.channel.id}/${message_data.quote.id}\n===== 以下为转发内容 =====\n${h.image(`${message_data.quote.user.avatar}?size=64`)}\n${quoted_nick.indexOf("[QQ:") !== -1 ? "":"[Discord] "}${quoted_nick}:\n`;
               }
 
-              if ("quote" in message_data && elements.length != 0){
+              if ("quote" in message_data && elements.length !== 0){
                 // 不同平台之间回复 & 同平台之间回复
                 const diff_platform_quote_message = await ctx.database.get("bridge_message", {
                   to_message_id: message_data.quote.id,
@@ -289,18 +287,18 @@ export function apply(ctx: Context, config: Config) {
                   from_channel_id: message_data.quote.channel.id
                 });
 
-                const quote_message = diff_platform_quote_message.length != 0 ? diff_platform_quote_message : same_platform_quote_message;
+                const quote_message = diff_platform_quote_message.length !== 0 ? diff_platform_quote_message : same_platform_quote_message;
 
-                if (quote_message.length != 0) {
+                if (quote_message.length !== 0) {
                   quoted_message_id = quote_message[0]["onebot_real_message_id"];
                 }
               }
 
-              for (const element of elements.length == 0 ? message_data.quote.elements:elements) {
+              for (const element of elements.length === 0 ? message_data.quote.elements:elements) {
                 switch (element.type) {
                   case "text": {
                     for (let word of config.words_blacklist) {
-                      if (element.attrs.content.toLowerCase().indexOf(word.toLowerCase()) != -1) return; // 发现黑名单
+                      if (element.attrs.content.toLowerCase().indexOf(word.toLowerCase()) !== -1) return; // 发现黑名单
                     }
 
                     message += element.attrs.content;
@@ -309,6 +307,9 @@ export function apply(ctx: Context, config: Config) {
                   }
 
                   case "at": {
+                    // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/4
+                    if (element.attrs.type === "all") break;
+
                     const user_info = await dc_bot.internal.getUser(element.attrs.id);
                     message += `@${user_info["global_name"] === null ? element.attrs.name : user_info["global_name"]}`;
 
@@ -329,7 +330,7 @@ export function apply(ctx: Context, config: Config) {
 
                   case "face": {
                     const src = element.children[0].attrs.src;
-                    message += h.image(`${src}${src.indexOf("?quality=lossless") != -1 ? "&size=44":""}`);
+                    message += h.image(`${src}${src.indexOf("?quality=lossless") !== -1 ? "&size=44":""}`);
 
                     break;
                   }
@@ -343,7 +344,7 @@ export function apply(ctx: Context, config: Config) {
 
                     await qqbot.internal.uploadGroupFile(to.channel_id, path, element.attrs.file);
 
-                    // if (config.file_transform != undefined) {
+                    // if (config.file_transform !== undefined) {
                     //   await getBinary(`${config.file_transform.url}/${config.file_transform.token}/${output.split("/").pop()}`); // 删除文件
                     // }
 
@@ -356,7 +357,7 @@ export function apply(ctx: Context, config: Config) {
                       break;
                     }
 
-                    if (element.attrs.src.indexOf("youtube.com") == -1) message += h("video", { src: element.attrs.src });
+                    if (element.attrs.src.indexOf("youtube.com") === -1) message += h("video", { src: element.attrs.src });
 
                     break;
                   }
@@ -368,7 +369,7 @@ export function apply(ctx: Context, config: Config) {
               let retry_count = 0;
               while (1) {
                 try {
-                  const message_id = await qqbot.sendMessage(to.channel_id, `${quoted_message_id == null ? "" : h.quote(quoted_message_id)}${h.image(`${sender.avatar}?size=64`)}[Discord] ${nickname}:\n${message}`);
+                  const message_id = await qqbot.sendMessage(to.channel_id, `${quoted_message_id === null ? "" : h.quote(quoted_message_id)}${h.image(`${sender.avatar}?size=64`)}[Discord] ${nickname}:\n${message}`);
                   const from_guild_id = await ctx.database.get("channel", {
                     id: channel_id
                   });

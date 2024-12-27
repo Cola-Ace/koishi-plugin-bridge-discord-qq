@@ -10,7 +10,10 @@ export default class ProcessorQQ {
     for (let element of elements) {
       switch (element.type) {
         case "at":{
-          const [stop, reason] = await this.at(element.attrs.name, message_body);
+          // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/4
+          if (element.attrs.type === "all") return [true, ""];
+
+          const [stop, reason] = this.at(element.attrs.name, message_body);
           if (stop) return [true, reason];
 
           break;
@@ -45,13 +48,13 @@ export default class ProcessorQQ {
           break;
         }
         case "json": {
-          const [stop, reason] = await this.json(element.attrs.data, message_body);
+          const [stop, reason] = this.json(element.attrs.data, message_body);
           if (stop) return [true, reason];
 
           break;
         }
         case "text": {
-          const [stop, reason] = await this.text(config.words_blacklist, element.attrs.content, message_body)
+          const [stop, reason] = this.text(config.words_blacklist, element.attrs.content, message_body)
           if (stop) return [true, reason];
 
           break;
@@ -68,15 +71,16 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async at(name: string, message_body: MessageBody): Promise<[boolean, string]> {
-    message_body.text += `\`${name.indexOf("@") == -1 ? "@":""}${name}\``;
+  static at(name: string, message_body: MessageBody): [boolean, string] {
+
+    message_body.text += `\`${name.indexOf("@") === -1 ? "@":""}${name}\``;
     message_body.validElement = true;
 
     return [false, ""];
   }
 
   static async face(url: string, message_body: MessageBody): Promise<[boolean, string]> {
-    if (url == "") return [false, ""];
+    if (url === "") return [false, ""];
     const [blob, type] = await getBinary(url);
     message_body.form.append(`files[${message_body.n}]`, blob, `${uuidv4()}.${type.split("/")[1]}`);
     message_body.n++;
@@ -120,7 +124,7 @@ export default class ProcessorQQ {
       const filename = attrs.file;
 
       const [file, type, error] = await getBinary(`${url}${filename}`);
-      if (error != null){
+      if (error !== null){
         message_body.text += "【文件传输失败，请联系管理员】";
         message_body.validElement = true;
 
@@ -141,7 +145,7 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async forward(blacklist: Array<string>, channel_id: string, contents: Array<Object>, dc_bot: Bot, from: BasicType, to: BasicType, ctx: Context): Promise<void> {
+  static async forward(blacklist: Array<string>, channel_id: string, contents: Array<object>, dc_bot: Bot, from: BasicType, to: BasicType, ctx: Context): Promise<void> {
     const thread = await dc_bot.internal.startThreadWithoutMessage(channel_id, { name: `转发消息 ${getDate()}`, type: 11 });
     await dc_bot.internal.modifyChannel(thread.id, { locked: true });
 
@@ -150,7 +154,7 @@ export default class ProcessorQQ {
       let bridge_message = false;
       let avatar = "";
       let nickname = "";
-      if (content["sender"]["user_id"] == from.self_id) bridge_message = true;
+      if (content["sender"]["user_id"] === from.self_id) bridge_message = true;
 
       for (let element of content["message"]) {
         switch (element.type) {
@@ -162,7 +166,7 @@ export default class ProcessorQQ {
             break;
           }
           case "image": {
-            if (bridge_message && avatar == "") {
+            if (bridge_message && avatar === "") {
               avatar = element["data"]["url"];
 
               break;
@@ -172,20 +176,20 @@ export default class ProcessorQQ {
             break;
           }
           case "json": {
-            await this.json(element["data"]["data"], message_body);
+            this.json(element["data"]["data"], message_body);
 
             break;
           }
           case "text": {
-            if (bridge_message && nickname == "") {
-              const temp = element["data"]["text"].split(`[Discord${element["data"]["text"].indexOf("[Discord·TweetShift]") != -1 ? "·TweetShift" : ""}] `)[1].split(":");
+            if (bridge_message && nickname === "") {
+              const temp = element["data"]["text"].split(`[Discord${element["data"]["text"].indexOf("[Discord·TweetShift]") !== -1 ? "·TweetShift" : ""}] `)[1].split(":");
               nickname = temp[0];
               temp.splice(0, 1)
-              await this.text(blacklist, temp.join(""), message_body);
+              this.text(blacklist, temp.join(""), message_body);
 
               break;
             }
-            await this.text(blacklist, element["data"]["text"], message_body)
+            this.text(blacklist, element["data"]["text"], message_body)
 
             break;
           }
@@ -201,7 +205,7 @@ export default class ProcessorQQ {
       const webhooks_list = await dc_bot.internal.getChannelWebhooks(channel_id);
 
       for (let webhook of webhooks_list) {
-        if (webhook["user"]["id"] == to.self_id && "url" in webhook) {
+        if (webhook["user"]["id"] === to.self_id && "url" in webhook) {
           webhook_url = webhook["url"];
           webhook_id = webhook["id"];
           has_webhook = true;
@@ -216,8 +220,8 @@ export default class ProcessorQQ {
 
       const payload_json = JSON.stringify({
         content: message_body.text,
-        username: nickname == "" ? `[QQ:${content["sender"]["user_id"]}] ${content["sender"]["nickname"]}` : nickname,
-        avatar_url: avatar == "" ? `https://q.qlogo.cn/headimg_dl?dst_uin=${content["sender"]["user_id"]}&spec=640` : avatar,
+        username: nickname === "" ? `[QQ:${content["sender"]["user_id"]}] ${content["sender"]["nickname"]}` : nickname,
+        avatar_url: avatar === "" ? `https://q.qlogo.cn/headimg_dl?dst_uin=${content["sender"]["user_id"]}&spec=640` : avatar,
         embeds: message_body.embed
       });
       message_body.form.append("payload_json", payload_json);
@@ -243,7 +247,7 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async json(raw: any, message_body: MessageBody): Promise<[boolean, string]> {
+  static json(raw: string, message_body: MessageBody): [boolean, string] {
     const data = JSON.parse(raw);
     switch (data["app"]) {
       case "com.tencent.structmsg": {
@@ -261,7 +265,7 @@ export default class ProcessorQQ {
             icon_url: data["meta"]["news"]["source_icon"]
           },
           color: 2605017,
-          image: image
+          image
         }];
         message_body.validElement = true;
 
@@ -279,7 +283,7 @@ export default class ProcessorQQ {
             icon_url: data["meta"]["detail_1"]["icon"]
           },
           color: 2605017,
-          image: image
+          image
         }];
         message_body.validElement = true;
 
@@ -303,7 +307,7 @@ export default class ProcessorQQ {
             text: "腾讯频道"
           },
           color: 2605017,
-          image: image
+          image
         }];
         message_body.validElement = true;
 
@@ -313,7 +317,7 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async text(blacklist: Array<string>, message_content: string, message_body: MessageBody): Promise<[boolean, string]> {
+  static text(blacklist: Array<string>, message_content: string, message_body: MessageBody): [boolean, string] {
     for (let word of blacklist) {
       if (message_content.toLowerCase().indexOf(word.toLowerCase()) != -1) return [true, "found blacklist words"];
     }

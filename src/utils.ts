@@ -22,7 +22,7 @@ export function getDate(){
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-export async function getBinary(url: string): Promise<[Blob, String, String]> {
+export async function getBinary(url: string): Promise<[Blob, string, string]> {
     try {
         const headers = new Headers({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
@@ -30,7 +30,7 @@ export async function getBinary(url: string): Promise<[Blob, String, String]> {
 
         const response = await fetch(url, {
             method: "GET",
-            headers: headers,
+            headers,
         });
         if (!response.ok) {
             throw new Error(`HTTP error! Status: ${response.status} | Response: ${response.text} | end`);
@@ -61,7 +61,7 @@ function bufferToBase64(buffer: Buffer): string {
   return buffer.toString('base64');
 }
 
-export async function converter(blob: Blob): Promise<String> {
+export async function converter(blob: Blob): Promise<string> {
   try {
     const arrayBuffer = await blobToArrayBuffer(blob);
     const buffer = arrayBufferToBuffer(arrayBuffer);

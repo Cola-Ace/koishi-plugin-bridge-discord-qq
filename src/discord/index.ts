@@ -1,10 +1,10 @@
 import { h } from 'koishi';
 
 export default class ProcessorDiscord {
-  static async processTweetshift(msgDetail: any, elements: any, blacklists: String[]): Promise<[boolean, string]> {
+  static processTweetshift(msgDetail: object, elements: Array<object>, blacklists: string[]): [boolean, string] {
     let message = "";
     for (const element of elements) {
-      if (element["type"] == "text") {
+      if (element["type"] === "text") {
         message += `${element["attrs"]["content"]}\n`;
       }
     }
