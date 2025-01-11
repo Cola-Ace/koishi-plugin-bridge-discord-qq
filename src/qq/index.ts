@@ -17,7 +17,7 @@ export default class ProcessorQQ {
             return [false, ""];
           }
 
-          const [stop, reason] = this.at(element.attrs.name, message_body);
+          const [stop, reason] = await this.at(element.attrs.id, from.channel_id, session, message_body);
           if (stop) return [true, reason];
 
           break;
@@ -78,8 +78,9 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static at(name: string, message_body: MessageBody): [boolean, string] {
-    message_body.text += `\`${name.indexOf("@") === -1 ? "@":""}${name}\``;
+  static async at(uid: string, group_id: string, session: Session, message_body: MessageBody): Promise<[boolean, string]> {
+    const name = (await session.onebot.getGroupMemberInfo(group_id, uid, true)).nickname;
+    message_body.text += `\`@${name}\``;
     message_body.validElement = true;
 
     return [false, ""];

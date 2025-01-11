@@ -231,6 +231,7 @@ export function apply(ctx: Context, config: Config) {
               const qqbot = ctx.bots[`${to.platform}:${to.self_id}`];
               const dc_bot = ctx.bots[`discord:${from.self_id}`];
 
+              // 屏蔽 TweetShift
               // if (nickname !== null && nickname.indexOf("TweetShift") !== -1) return;
 
               // 处理 Tweetshift
