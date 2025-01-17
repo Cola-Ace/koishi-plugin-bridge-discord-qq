@@ -29,7 +29,7 @@
 
 # 使用方法
 1. constant 添加项目后，在 from 和 to 中分别添加一个项目
-2. 在 from 和 to 中，platform 填入 discord 或者 onebot，频道ID根据不同的平台而定，自身ID则是 bot 的ID，频道ID和自身ID建议使用 koishi 自带的 inspect 插件查看
+2. 在 from 和 to 中，platform 填入 discord 或者 onebot，频道 ID 根据不同的平台而定，自身 ID 则是 bot 的 ID，频道 ID 和自身 ID 建议使用 Koishi 自带的 inspect 插件查看 （详见 https://koishi.chat/zh-CN/manual/usage/platform.html#%E8%8E%B7%E5%8F%96%E8%B4%A6%E5%8F%B7%E4%BF%A1%E6%81%AF）
 3. words_blacklist 为黑名单，黑名单内的词出现在即将发送的消息中时消息将不会被发送
 
 # 待办事项
