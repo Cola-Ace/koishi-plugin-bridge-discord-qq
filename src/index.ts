@@ -57,8 +57,8 @@ const main = async (ctx: Context, config: Config, session: Session) => {
 
               const dc_bot = ctx.bots[`discord:${to.self_id}`];
 
-              let message_body = { text: "", form: new FormData(), n: 0, embed: null, validElement: false, hasFile: false };
-              const [stop, reason] = await ProcessorQQ.process(elements, session, config, from, to, ctx, dc_bot, message_body);
+              const message_body = { text: "", form: new FormData(), n: 0, embed: null, validElement: false, hasFile: false };
+              const [stop, _] = await ProcessorQQ.process(elements, session, config, from, to, ctx, dc_bot, message_body);
               if (stop || !message_body.validElement) return;
 
               if ("quote" in message_data) {
@@ -72,7 +72,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                   from_channel_id: channel_id
                 });
 
-                let quote_message = { type: diff_platform_quote_message.length !== 0 ? "diff" : "same", data: diff_platform_quote_message.length !== 0 ? diff_platform_quote_message : same_platform_quote_message };
+                const quote_message = { type: diff_platform_quote_message.length !== 0 ? "diff" : "same", data: diff_platform_quote_message.length !== 0 ? diff_platform_quote_message : same_platform_quote_message };
 
                 if (quote_message.data.length !== 0) {
                   let message = "";
@@ -285,7 +285,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
             for (const element of elements.length === 0 ? message_data.quote.elements : elements) {
               switch (element.type) {
                 case "text": {
-                  for (let word of config.words_blacklist) {
+                  for (const word of config.words_blacklist) {
                     if (element.attrs.content.toLowerCase().indexOf(word.toLowerCase()) !== -1) return; // 发现黑名单
                   }
 
@@ -298,6 +298,12 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                   // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/4
                   if (element.attrs.type === "all") {
                     message += "@everyone ";
+                    break;
+                  }
+
+                  // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/5
+                  if (element.attrs.type === "here"){
+                    message += "@here ";
                     break;
                   }
 
@@ -359,7 +365,11 @@ const main = async (ctx: Context, config: Config, session: Session) => {
               }
             }
 
-            nickname = sender.nick === null ? sender.name : sender.nick;
+            // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/6
+            const member = await dc_bot.internal.getGuildMember(session.guildId, sender.id);
+
+            // nickname = sender.nick === null ? sender.name : sender.nick;
+            nickname = member.nick === null ? member.user.global_name : member.nick;
 
             let retry_count = 0;
             while (1) {

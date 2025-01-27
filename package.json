@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-bridge-qq-discord",
   "description": "自用插件，如需进一步了解请联系我（联系方式见 Github）",
-  "version": "1.6.11",
+  "version": "1.6.12",
   "contributors": [
     "Xc_ace <xca259@gmail.com>"
   ],
@@ -25,8 +25,8 @@
   },
   "koishi": {
     "description": {
-      "zh": "联通discord与qq（自用插件）",
-      "en": "Unite discord and qq"
+      "zh": "联通 Discord 与 QQ（自用插件）",
+      "en": "Unite Discord and QQ"
     }
   },
   "scripts": {
@@ -34,19 +34,19 @@
     "build": "yakumo esbuild"
   },
   "dependencies": {
-    "koishi-plugin-adapter-onebot": "^6.5.8",
-    "uuid": "^10.0.0",
     "@cordisjs/eslint-config": "^1.1.1",
     "@types/node": "^22.1.0",
     "esbuild": "^0.23.1",
     "esbuild-register": "^3.5.0",
     "eslint": "^8.57.0",
     "koishi": "^4.17.12",
+    "koishi-plugin-adapter-onebot": "^6.5.8",
     "typescript": "^5.5.3",
-    "yml-register": "^1.2.5",
+    "uuid": "^10.0.0",
     "yakumo": "^0.3.13",
     "yakumo-esbuild": "^0.3.26",
-    "yakumo-tsc": "^0.3.12"
+    "yakumo-tsc": "^0.3.12",
+    "yml-register": "^1.2.5"
   },
   "devDependencies": {
     "@types/uuid": "^10"

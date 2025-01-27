@@ -79,7 +79,10 @@ export default class ProcessorQQ {
   }
 
   static async at(uid: string, group_id: string, session: Session, message_body: MessageBody): Promise<[boolean, string]> {
-    const name = (await session.onebot.getGroupMemberInfo(group_id, uid, true)).nickname;
+    const member = await session.onebot.getGroupMemberInfo(group_id, uid, true)
+
+    // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/6
+    const name = member.card === "" ? member.nickname : member.card;
     message_body.text += `\`@${name}\``;
     message_body.validElement = true;
 
