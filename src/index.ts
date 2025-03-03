@@ -370,11 +370,13 @@ const main = async (ctx: Context, config: Config, session: Session) => {
 
             // nickname = sender.nick === null ? sender.name : sender.nick;
             nickname = member.nick === null ? member.user.global_name : member.nick;
+            // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/7
+            const avatar = sender.avatar === null ? "https://cdn.discordapp.com/embed/avatars/0.png" : `${sender.avatar}?size=64`;
 
             let retry_count = 0;
             while (1) {
               try {
-                const message_id = await qqbot.sendMessage(to.channel_id, `${quoted_message_id === null ? "" : h.quote(quoted_message_id)}${h.image(`${sender.avatar}?size=64`)}[Discord] ${nickname}:\n${message}`);
+                const message_id = await qqbot.sendMessage(to.channel_id, `${quoted_message_id === null ? "" : h.quote(quoted_message_id)}${h.image(avatar)}[Discord] ${nickname}:\n${message}`);
                 const from_guild_id = await ctx.database.get("channel", {
                   id: channel_id
                 });
