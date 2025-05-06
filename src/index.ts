@@ -332,6 +332,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                   break;
                 }
 
+                case "record":
                 case "file": {
                   if (parseInt(element.attrs.size) > config.qq_file_limit) {
                     message += "【检测到大小超过设置上限的文件，请到 Discord 查看】"
