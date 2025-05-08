@@ -100,40 +100,18 @@ export default class ProcessorQQ {
   }
 
   static async file(attrs: Dict, discord_file_limit: number, session: Session, message_body: MessageBody, group_id: string): Promise<[boolean, string]> {
-    if (parseInt(attrs.fileSize) > discord_file_limit) {
-      message_body.text += "【检测到大小大于设置上限的文件，请到 QQ 下载】";
-      message_body.validElement = true;
-
-      return [false, ""];
-    }
-
-    // if (file_transform === undefined) {
-    //   message_body.text += "【检测到文件，请到 QQ 下载】";
-    //   message_body.valid_element = true;
-
-    //   return [false, ""];
-    // }
     try {
-      /* with file-transform service
-      const res = await session.onebot.getImage(attrs.fileId);
-      const filename = res["file"].split("/").pop();
-      const [file, type] = await getBinary(`${file_transform.url}/${file_transform.token}/${filename}`);
-      if (file === null) {
-        message_body.text += "【文件传输失败，请联系管理员】";
-        message_body.valid_element = true;
+      const url = await session.onebot.getGroupFileUrl(group_id, attrs.fileId, 102);
+      const filename = attrs.file;
+      const download_url = `${url}${filename}`;
+      if (parseInt(attrs.fileSize) > discord_file_limit){
+        message_body.text += `【检测到大小大于设置上限的文件，请自行下载】\n下载链接：${download_url}`;
+        message_body.validElement = true;
 
         return [false, ""];
       }
 
-      message_body.form.append(`files[${message_body.n}]`, file, res["file_name"]);
-      message_body.n++;
-      message_body.valid_element = true;
-      */
-
-      const url = await session.onebot.getGroupFileUrl(group_id, attrs.fileId, 102);
-      const filename = attrs.file;
-
-      const [file, type, error] = await getBinary(`${url}${filename}`);
+      const [file, type, error] = await getBinary(download_url);
       if (error !== null){
         message_body.text += "【文件传输失败，请联系管理员】";
         message_body.validElement = true;
