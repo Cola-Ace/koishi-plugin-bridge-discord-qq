@@ -1,12 +1,14 @@
 import { Bot, Context, Dict, h, Session } from "koishi";
-import { getBinary, logger, getDate } from "../utils";
-import { MessageBody, Config, BasicType } from "../config";
+import { getBinary, logger, getDate, BlacklistDetector } from "../utils";
+import { Config, BasicType } from "../config";
+import { MessageBody } from "../types";
 import { v4 as uuidv4 } from 'uuid';
 
 // return stop = false 相当于 break
 
 export default class ProcessorQQ {
-  static async process(elements: h[], session: Session, config: Config, from: BasicType, to: BasicType, ctx: Context, dc_bot: Bot, message_body: MessageBody): Promise<[boolean, string]> { // stop, reason
+   // return [stop, reason]
+  static async process(elements: h[], session: Session, config: Config, from: BasicType, to: BasicType, ctx: Context, dc_bot: Bot, message_body: MessageBody, Blacklist: BlacklistDetector): Promise<[boolean, string]> {
     for (let element of elements) {
       switch (element.type) {
         case "at":{
@@ -42,7 +44,7 @@ export default class ProcessorQQ {
           break;
         }
         case "forward": {
-          await this.forward(config.words_blacklist, to.channel_id, element.attrs.content, dc_bot, from, to, ctx);
+          await this.forward(Blacklist, to.channel_id, element.attrs.content, dc_bot, from, to, ctx);
           return [true, "done"];
         }
         case "img": {
@@ -58,7 +60,7 @@ export default class ProcessorQQ {
           break;
         }
         case "text": {
-          const [stop, reason] = this.text(config.words_blacklist, element.attrs.content, message_body)
+          const [stop, reason] = this.text(Blacklist, element.attrs.content, message_body)
           if (stop) return [true, reason];
 
           break;
@@ -133,7 +135,7 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async forward(blacklist: Array<string>, channel_id: string, contents: Array<object>, dc_bot: Bot, from: BasicType, to: BasicType, ctx: Context): Promise<void> {
+  static async forward(blacklist: BlacklistDetector, channel_id: string, contents: Array<object>, dc_bot: Bot, from: BasicType, to: BasicType, ctx: Context): Promise<void> {
     const thread = await dc_bot.internal.startThreadWithoutMessage(channel_id, { name: `转发消息 ${getDate()}`, type: 11 });
     await dc_bot.internal.modifyChannel(thread.id, { locked: true });
 
@@ -169,14 +171,15 @@ export default class ProcessorQQ {
             break;
           }
           case "text": {
-            if (bridge_message && nickname === "") {
-              const temp = element["data"]["text"].split(`[Discord${element["data"]["text"].indexOf("[Discord·TweetShift]") !== -1 ? "·TweetShift" : ""}] `)[1].split(":");
-              nickname = temp[0];
-              temp.splice(0, 1)
-              this.text(blacklist, temp.join(""), message_body);
+            // process TweetShift
+            // if (bridge_message && nickname === "") {
+            //   const temp = element["data"]["text"].split(`[Discord${element["data"]["text"].indexOf("[Discord·TweetShift]") !== -1 ? "·TweetShift" : ""}] `)[1].split(":");
+            //   nickname = temp[0];
+            //   temp.splice(0, 1)
+            //   this.text(blacklist, temp.join(""), message_body);
 
-              break;
-            }
+            //   break;
+            // }
             this.text(blacklist, element["data"]["text"], message_body)
 
             break;
@@ -305,10 +308,11 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static text(blacklist: Array<string>, message_content: string, message_body: MessageBody): [boolean, string] {
-    for (let word of blacklist) {
-      if (message_content.toLowerCase().indexOf(word.toLowerCase()) != -1) return [true, "found blacklist words"];
-    }
+  static text(blacklist: BlacklistDetector, message_content: string, message_body: MessageBody): [boolean, string] {
+    // for (let word of blacklist) {
+    //   if (message_content.toLowerCase().indexOf(word.toLowerCase()) != -1) return [true, "found blacklist words"];
+    // }
+    if (blacklist.check(message_content)) return [true, "found blacklist words"];
 
     message_body.text += message_content;
     message_body.validElement = true;

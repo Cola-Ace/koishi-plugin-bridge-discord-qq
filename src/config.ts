@@ -44,15 +44,6 @@ export interface BridgeMessage {
   onebot_real_message_id: string
 }
 
-export interface MessageBody {
-  text: string,
-  form: FormData,
-  n: number,
-  embed: Array<object>,
-  validElement: boolean,
-  hasFile: boolean
-}
-
 export const Config: Schema<Config> = Schema.object({
   words_blacklist: Schema.array(String).description("屏蔽词"),
   debug: Schema.boolean().description("开启 Debug 模式").default(false),

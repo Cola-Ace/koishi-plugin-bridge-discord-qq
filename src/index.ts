@@ -3,9 +3,10 @@ import { } from 'koishi-plugin-adapter-onebot';
 import { Config } from './config';
 
 export * from "./config";
-import { convertMsTimestampToISO8601, logger } from './utils';
+import { MessageBody } from './types';
+import { convertMsTimestampToISO8601, logger, BlacklistDetector } from './utils';
 import ProcessorQQ from './qq';
-import ProcessorDiscord from './discord';
+// import ProcessorDiscord from './discord';
 
 export const name = 'bridge-qq-discord';
 
@@ -23,6 +24,8 @@ const main = async (ctx: Context, config: Config, session: Session) => {
   const channel_id = session.event.channel.id;
   const message_data = session.event.message;
 
+  const Blacklist = new BlacklistDetector(config.words_blacklist);
+
   // 测试用
   if (config.debug) {
     logger.info("-------Message-------");
@@ -37,10 +40,10 @@ const main = async (ctx: Context, config: Config, session: Session) => {
   if ("id" in message_data) is_qq_file = false;
   if (is_qq_file) return;
 
-  let nickname = sender.isBot ? sender.name : "member" in session.event ? session.event.member.nick : sender.name; // 判断是否为 bot
+  let nickname = sender.isBot ? sender.name : ("member" in session.event ? session.event.member.nick : sender.name); // 判断是否为 bot
 
   // const elements = message_data.elements.filter(element => element.type !== "at"); // 确保没有@格式
-  const elements = message_data.elements;
+  let elements = message_data.elements;
 
   if (elements.length <= 0 && !Object.keys(message_data).includes("quote")) return;
 
@@ -57,9 +60,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
 
               const dc_bot = ctx.bots[`discord:${to.self_id}`];
 
-              const message_body = { text: "", form: new FormData(), n: 0, embed: null, validElement: false, hasFile: false };
-              const [stop, _] = await ProcessorQQ.process(elements, session, config, from, to, ctx, dc_bot, message_body);
-              if (stop || !message_body.validElement) return;
+              const message_body: MessageBody = { text: "", form: new FormData(), n: 0, embed: null, validElement: false, hasFile: false };
 
               if ("quote" in message_data) {
                 // 不同平台之间回复 & 同平台之间回复
@@ -86,6 +87,10 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                     }
                     case "diff": { // 不同平台之间回复
                       source = "from"
+                      // 删除 QQ 回复时自动带上的 @
+                      if (elements[0].type === "at" && elements[0].attrs.id === self_id) {
+                        elements.shift();
+                      }
                       break;
                     }
                     default: {
@@ -95,6 +100,10 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                   if (source === "") return;
 
                   const dc_message = await dc_bot.getMessage(quote_message["data"][0][`${source}_channel_id`], quote_message["data"][0][`${source}_message_id`]);
+                  if (source === "from"){
+                    message_body.text += `<@${dc_message.user.id}>`;
+                    message_body.validElement = true;
+                  }
 
                   for (const element of dc_message.elements) {
                     switch (element.type) {
@@ -117,12 +126,10 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                       }
                     }
                   }
-                  for (const word of config.words_blacklist) {
-                    if (message.toLowerCase().indexOf(word.toLowerCase()) !== -1) return; // 黑名单检测
-                  }
+                  if (Blacklist.check(message)) return; // 黑名单检测
                   message_body.embed = [{
                     author: {
-                      name: dc_message["user"]["name"],
+                      name: (dc_message["user"]["nick"] === null ? dc_message["user"]["name"] : dc_message["user"]["nick"]),
                       icon_url: dc_message["user"]["avatar"]
                     },
                     timestamp: convertMsTimestampToISO8601(Number(quote_message["data"][0]["timestamp"])),
@@ -132,6 +139,9 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                   }]
                 }
               }
+
+              const [stop, _] = await ProcessorQQ.process(elements, session, config, from, to, ctx, dc_bot, message_body, Blacklist);
+              if (stop || !message_body.validElement) return;
 
               // 实现发送消息功能
               if (nickname === null || nickname === "") nickname = sender.name;
@@ -215,6 +225,9 @@ const main = async (ctx: Context, config: Config, session: Session) => {
             // if (nickname !== null && nickname.indexOf("TweetShift") !== -1) return;
 
             // 处理 Tweetshift
+            /*
+             * @deprecated because TweetShift are using IFTTT now (maybe?)
+             *
             if (nickname !== null && nickname.indexOf("TweetShift") !== -1) {
               const [stop, message] = ProcessorDiscord.processTweetshift(
                 await dc_bot.internal.getChannelMessage(session.event.channel.id, message_data.id),
@@ -249,6 +262,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
 
               return;
             }
+            */
 
             let message = "";
             let quoted_message_id = null;
@@ -285,9 +299,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
             for (const element of elements.length === 0 ? message_data.quote.elements : elements) {
               switch (element.type) {
                 case "text": {
-                  for (const word of config.words_blacklist) {
-                    if (element.attrs.content.toLowerCase().indexOf(word.toLowerCase()) !== -1) return; // 发现黑名单
-                  }
+                  if (Blacklist.check(element.attrs.content)) return; // 黑名单检测
 
                   message += element.attrs.content;
 
@@ -302,7 +314,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                   }
 
                   // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/5
-                  if (element.attrs.type === "here"){
+                  if (element.attrs.type === "here") {
                     message += "@here ";
                     break;
                   }
@@ -342,10 +354,6 @@ const main = async (ctx: Context, config: Config, session: Session) => {
 
                   await qqbot.internal.uploadGroupFile(to.channel_id, path, element.attrs.file);
 
-                  // if (config.file_transform !== undefined) {
-                  //   await getBinary(`${config.file_transform.url}/${config.file_transform.token}/${output.split("/").pop()}`); // 删除文件
-                  // }
-
                   break;
                 }
 
@@ -367,10 +375,12 @@ const main = async (ctx: Context, config: Config, session: Session) => {
             }
 
             // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/6
-            const member = await dc_bot.internal.getGuildMember(session.guildId, sender.id);
+            if (!sender.isBot) {
+              const member = await dc_bot.internal.getGuildMember(session.guildId, sender.id);
+              // nickname = sender.nick === null ? sender.name : sender.nick;
+              nickname = member.nick === null ? member.user.global_name : member.nick;
+            }
 
-            // nickname = sender.nick === null ? sender.name : sender.nick;
-            nickname = member.nick === null ? member.user.global_name : member.nick;
             // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/7
             const avatar = sender.avatar === null ? "https://cdn.discordapp.com/embed/avatars/0.png" : `${sender.avatar}?size=64`;
 
