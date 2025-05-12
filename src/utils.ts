@@ -1,4 +1,4 @@
-import { Logger } from 'koishi';
+import { Logger, HTTP } from 'koishi';
 
 export const logger = new Logger("bridge");
 export function convertMsTimestampToISO8601(msTimestamp: number): string {
@@ -22,20 +22,26 @@ export function getDate() {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-export async function getBinary(url: string): Promise<[Blob, string, string]> {
+export async function getBinary(url: string, http: HTTP): Promise<[Blob, string, string]> {
   try {
-    const headers = new Headers({
+    const headers = {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-    });
+    }
 
-    const response = await fetch(url, {
+    // const response = await fetch(url, {
+    //   method: "GET",
+    //   headers,
+    // });
+
+    const response = await http(url, {
       method: "GET",
       headers,
     });
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status} | Response: ${response.text} | end`);
+    if (response.status !== 200) {
+      throw new Error(`Request Error! URL: ${url} | Status: ${response.status} | Response: ${response.data}`);
     }
-    return [await response.blob(), response.headers.get("Content-Type"), null];
+    const blob = new Blob([response.data], { type: response.headers.get("Content-Type") });
+    return [blob, response.headers.get("Content-Type"), null];
   } catch (error) {
     return [null, null, error];
   }

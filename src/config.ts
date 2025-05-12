@@ -16,6 +16,7 @@ export interface BasicType {
 export interface Config {
   words_blacklist: Array<string>,
   debug: boolean,
+  file_processor: "Koishi" | "QQBot",
   download_threads: number,
   qq_file_limit: number,
   discord_file_limit: number,
@@ -47,6 +48,10 @@ export interface BridgeMessage {
 export const Config: Schema<Config> = Schema.object({
   words_blacklist: Schema.array(String).description("屏蔽词"),
   debug: Schema.boolean().description("开启 Debug 模式").default(false),
+  file_processor: Schema.union([
+    Schema.const("Koishi"),
+    Schema.const("QQBot")
+  ]).default("Koishi").description("将由哪个平台处理文件（对于 Discord -> QQ 来说，建议使用可以访问 Discord 的平台处理，通常为 Koishi）"),
   download_threads: Schema.number().description("下载文件时的默认线程数").default(4),
   qq_file_limit: Schema.number().description("QQ 文件上传大小上限，单位为字节").default(20971520),
   discord_file_limit: Schema.number().description("Discord 文件上传大小上限，单位为字节（该选项不应设置太高，避免超过 Discord 本身的限制）").default(10485760),

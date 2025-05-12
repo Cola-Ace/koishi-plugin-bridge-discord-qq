@@ -1,4 +1,4 @@
-import { Bot, Context, Dict, h, Session } from "koishi";
+import { Bot, Context, Dict, h, Session, HTTP } from "koishi";
 import { getBinary, logger, getDate, BlacklistDetector } from "../utils";
 import { Config, BasicType } from "../config";
 import { MessageBody } from "../types";
@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 export default class ProcessorQQ {
    // return [stop, reason]
   static async process(elements: h[], session: Session, config: Config, from: BasicType, to: BasicType, ctx: Context, dc_bot: Bot, message_body: MessageBody, Blacklist: BlacklistDetector): Promise<[boolean, string]> {
+    const http = ctx.http;
     for (const element of elements) {
       switch (element.type) {
         case "at":{
@@ -26,19 +27,19 @@ export default class ProcessorQQ {
         }
 
         case "face": {
-          const [stop, reason] = await this.face(element.children[0].attrs.src, message_body);
+          const [stop, reason] = await this.face(element.children[0].attrs.src, message_body, http);
           if (stop) return [true, reason];
 
           break;
         }
         case "mface": {
-          const [stop, reason] = await this.face(element.attrs.url, message_body);
+          const [stop, reason] = await this.face(element.attrs.url, message_body, http);
           if (stop) return [true, reason];
 
           break;
         }
         case "file": {
-          const [stop, reason] = await this.file(element.attrs, config.discord_file_limit, session, message_body, from.channel_id);
+          const [stop, reason] = await this.file(element.attrs, config.discord_file_limit, session, message_body, from.channel_id, http);
           if (stop) return [true, reason];
 
           break;
@@ -48,7 +49,7 @@ export default class ProcessorQQ {
           return [true, "done"];
         }
         case "img": {
-          const [stop, reason] = await this.image(element.attrs.src, message_body);
+          const [stop, reason] = await this.image(element.attrs.src, message_body, http);
           if (stop) return [true, reason];
 
           break;
@@ -66,7 +67,7 @@ export default class ProcessorQQ {
           break;
         }
         case "video": {
-          const [stop, reason] = await this.video(element.attrs, config.discord_file_limit, message_body);
+          const [stop, reason] = await this.video(element.attrs, config.discord_file_limit, message_body, http);
           if (stop) return [true, reason];
 
           break;
@@ -91,9 +92,9 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async face(url: string, message_body: MessageBody): Promise<[boolean, string]> {
+  static async face(url: string, message_body: MessageBody, http: HTTP): Promise<[boolean, string]> {
     if (url === "") return [false, ""];
-    const [blob, type] = await getBinary(url);
+    const [blob, type] = await getBinary(url, http);
     message_body.form.append(`files[${message_body.n}]`, blob, `${uuidv4()}.${type.split("/")[1]}`);
     message_body.n++;
     message_body.validElement = true;
@@ -101,7 +102,7 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async file(attrs: Dict, discord_file_limit: number, session: Session, message_body: MessageBody, group_id: string): Promise<[boolean, string]> {
+  static async file(attrs: Dict, discord_file_limit: number, session: Session, message_body: MessageBody, group_id: string, http: HTTP): Promise<[boolean, string]> {
     try {
       const url = await session.onebot.getGroupFileUrl(group_id, attrs.fileId, 102);
       const filename = attrs.file;
@@ -113,7 +114,7 @@ export default class ProcessorQQ {
         return [false, ""];
       }
 
-      const [file, type, error] = await getBinary(download_url);
+      const [file, type, error] = await getBinary(download_url, http);
       if (error !== null){
         message_body.text += "【文件传输失败，请联系管理员】";
         message_body.validElement = true;
@@ -161,7 +162,7 @@ export default class ProcessorQQ {
 
               break;
             }
-            await this.image(element["data"]["url"], message_body);
+            await this.image(element["data"]["url"], message_body, ctx.http);
 
             break;
           }
@@ -232,8 +233,8 @@ export default class ProcessorQQ {
     }
   }
 
-  static async image(url: string, message_body: MessageBody): Promise<[boolean, string]> {
-    const [blob, type] = await getBinary(url);
+  static async image(url: string, message_body: MessageBody, http: HTTP): Promise<[boolean, string]> {
+    const [blob, type] = await getBinary(url, http);
     message_body.form.append(`files[${message_body.n}]`, blob, `${uuidv4()}.${type.split("/")[1]}`);
     message_body.n++;
     message_body.validElement = true;
@@ -326,7 +327,7 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async video(attrs: Dict, discord_file_limit: number, message_body: MessageBody): Promise<[boolean, string]> {
+  static async video(attrs: Dict, discord_file_limit: number, message_body: MessageBody, http: HTTP): Promise<[boolean, string]> {
     if (parseInt(attrs.fileSize) > discord_file_limit) {
       message_body.text += `【检测到大小大于设置上限的视频，请自行下载】\n下载链接：${attrs.src || attrs.url}\n文件名：${attrs.file}`;
       message_body.validElement = true;
@@ -334,7 +335,7 @@ export default class ProcessorQQ {
       return [false, ""];
     }
 
-    const [file, type] = await getBinary(attrs.src || attrs.url);
+    const [file, type] = await getBinary(attrs.src || attrs.url, http);
     message_body.form.append(`files[${message_body.n}]`, file, attrs.file);
     message_body.n++;
     message_body.validElement = true;

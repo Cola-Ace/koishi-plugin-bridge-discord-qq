@@ -4,7 +4,7 @@ import { Config } from './config';
 
 export * from "./config";
 import { MessageBody } from './types';
-import { convertMsTimestampToISO8601, logger, BlacklistDetector } from './utils';
+import { convertMsTimestampToISO8601, logger, BlacklistDetector, getBinary } from './utils';
 import ProcessorQQ from './qq';
 // import ProcessorDiscord from './discord';
 
@@ -332,7 +332,17 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                 }
 
                 case "img": {
-                  message += h.image(element.attrs.src);
+                  if (config.file_processor === "Koishi") {
+                    const [img_blob, img_type, img_error] = await getBinary(element.attrs.src, ctx.http);
+                    if (img_error) {
+                      logger.error(img_error);
+                      break;
+                    }
+                    const img_arrayBuffer = await img_blob.arrayBuffer();
+                    message += h.image(img_arrayBuffer, element.attrs.type);
+                  } else {
+                    message += h.image(element.attrs.src);
+                  }
 
                   break;
                 }
@@ -363,7 +373,19 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                     break;
                   }
 
-                  if (element.attrs.src.indexOf("youtube.com") === -1) message += h("video", { src: element.attrs.src });
+                  if (element.attrs.src.indexOf("youtube.com") !== -1) break;
+
+                  if (config.file_processor === "Koishi") {
+                    const [video_blob, video_type, video_error] = await getBinary(element.attrs.src, ctx.http);
+                    if (video_error) {
+                      logger.error(video_error);
+                      break;
+                    }
+                    const video_arrayBuffer = await video_blob.arrayBuffer();
+                    message += h.video(video_arrayBuffer, element.attrs.type);
+                  } else {
+                    message += h.video(element.attrs.src);
+                  }
 
                   break;
                 }
@@ -384,10 +406,21 @@ const main = async (ctx: Context, config: Config, session: Session) => {
             // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/7
             const avatar = sender.avatar === null ? "https://cdn.discordapp.com/embed/avatars/0.png" : `${sender.avatar}?size=64`;
 
+            let message_content = `${quoted_message_id === null ? "" : h.quote(quoted_message_id)}${h.image(avatar)}[Discord] ${nickname}:\n${message}`;
+            if (config.file_processor === "Koishi") {
+              const [avatar_blob, avatar_type, avatar_error] = await getBinary(avatar, ctx.http);
+              if (avatar_error) {
+                logger.error(avatar_error);
+                return;
+              }
+              const avatar_arrayBuffer = await avatar_blob.arrayBuffer();
+              message_content = `${quoted_message_id === null ? "" : h.quote(quoted_message_id)}${h.image(avatar_arrayBuffer, avatar_type)}[Discord] ${nickname}:\n${message}`;
+            }
+
             let retry_count = 0;
-            while (1) {
+            while (retry_count < 4){
               try {
-                const message_id = await qqbot.sendMessage(to.channel_id, `${quoted_message_id === null ? "" : h.quote(quoted_message_id)}${h.image(avatar)}[Discord] ${nickname}:\n${message}`);
+                const message_id = await qqbot.sendMessage(to.channel_id, message_content);
                 const from_guild_id = await ctx.database.get("channel", {
                   id: channel_id
                 });
