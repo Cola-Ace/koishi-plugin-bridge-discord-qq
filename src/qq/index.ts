@@ -8,8 +8,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 export default class ProcessorQQ {
    // return [stop, reason]
-  static async process(elements: h[], session: Session, config: Config, from: BasicType, to: BasicType, ctx: Context, dc_bot: Bot, message_body: MessageBody, Blacklist: BlacklistDetector): Promise<[boolean, string]> {
+  static async process(elements: h[], session: Session, config: Config, [from, to]: [BasicType, BasicType], ctx: Context, message_body: MessageBody, Blacklist: BlacklistDetector): Promise<[boolean, string]> {
     const http = ctx.http;
+    const dc_bot = ctx.bots[`discord:${to.self_id}`];
+
     for (const element of elements) {
       switch (element.type) {
         case "at":{
@@ -45,7 +47,7 @@ export default class ProcessorQQ {
           break;
         }
         case "forward": {
-          await this.forward(Blacklist, to.channel_id, element.attrs.content, dc_bot, from, to, ctx);
+          await this.forward(Blacklist, to.channel_id, element.attrs.content, dc_bot, [from, to], ctx);
           return [true, "done"];
         }
         case "img": {
@@ -67,7 +69,7 @@ export default class ProcessorQQ {
           break;
         }
         case "video": {
-          const [stop, reason] = await this.video(element.attrs, config.discord_file_limit, message_body, http);
+          const [stop, reason] = await this.video(element.attrs, config.discord_file_limit, message_body, http, session);
           if (stop) return [true, reason];
 
           break;
@@ -106,15 +108,17 @@ export default class ProcessorQQ {
     try {
       const url = await session.onebot.getGroupFileUrl(group_id, attrs.fileId, 102);
       const filename = attrs.file;
-      const download_url = `${url}${filename}`;
+      const download_url = `${url}${filename.replace(/ /g, "%20")}`;
       if (parseInt(attrs.fileSize) > discord_file_limit){
-        message_body.text += `【检测到大小大于设置上限的文件，请自行下载】\n下载链接：${download_url}`;
+        message_body.text += `【检测到大小大于设置上限的文件，请自行下载】\n下载链接：${download_url}\n文件名：${filename}`;
         message_body.validElement = true;
+
+        await session.send(`${h.quote(session.messageId)}【该条消息中的文件大小超出限制，已发送文件直链到 Discord 以供下载】`);
 
         return [false, ""];
       }
 
-      const [file, type, error] = await getBinary(download_url, http);
+      const [file, _, error] = await getBinary(download_url, http);
       if (error !== null){
         message_body.text += "【文件传输失败，请联系管理员】";
         message_body.validElement = true;
@@ -136,7 +140,7 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async forward(blacklist: BlacklistDetector, channel_id: string, contents: Array<object>, dc_bot: Bot, from: BasicType, to: BasicType, ctx: Context): Promise<void> {
+  static async forward(blacklist: BlacklistDetector, channel_id: string, contents: Array<object>, dc_bot: Bot, [from, to]: [BasicType, BasicType], ctx: Context): Promise<void> {
     const thread = await dc_bot.internal.startThreadWithoutMessage(channel_id, { name: `转发消息 ${getDate()}`, type: 11 });
     await dc_bot.internal.modifyChannel(thread.id, { locked: true });
 
@@ -327,20 +331,22 @@ export default class ProcessorQQ {
     return [false, ""];
   }
 
-  static async video(attrs: Dict, discord_file_limit: number, message_body: MessageBody, http: HTTP): Promise<[boolean, string]> {
+  static async video(attrs: Dict, discord_file_limit: number, message_body: MessageBody, http: HTTP, session: Session): Promise<[boolean, string]> {
     if (parseInt(attrs.fileSize) > discord_file_limit) {
       message_body.text += `【检测到大小大于设置上限的视频，请自行下载】\n下载链接：${attrs.src || attrs.url}\n文件名：${attrs.file}`;
       message_body.validElement = true;
 
+      await session.send(`${h.quote(session.messageId)}【该条消息中的视频大小超出限制，已发送视频直链到 Discord 以供下载】`);
+
       return [false, ""];
     }
 
-    const [file, type] = await getBinary(attrs.src || attrs.url, http);
+    const [file, _] = await getBinary(attrs.src || attrs.url, http);
     message_body.form.append(`files[${message_body.n}]`, file, attrs.file);
     message_body.n++;
     message_body.validElement = true;
     message_body.hasFile = true;
-    message_body.text += "【检测到文件，若没有收到请前往 QQ 查看】";
+    message_body.text += "【检测到视频，若没有收到请前往 QQ 查看】";
 
     return [false, ""];
   }

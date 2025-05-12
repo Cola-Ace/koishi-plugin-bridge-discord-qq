@@ -140,7 +140,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                 }
               }
 
-              const [stop, _] = await ProcessorQQ.process(elements, session, config, from, to, ctx, dc_bot, message_body, Blacklist);
+              const [stop, _] = await ProcessorQQ.process(elements, session, config, [from, to], ctx, message_body, Blacklist);
               if (stop || !message_body.validElement) return;
 
               // 实现发送消息功能

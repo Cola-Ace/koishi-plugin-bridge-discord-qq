@@ -61,35 +61,3 @@ export class BlacklistDetector {
     return false;
   }
 }
-
-// 步骤 1: 将 Blob 转换为 ArrayBuffer
-function blobToArrayBuffer(blob: Blob): Promise<ArrayBuffer> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as ArrayBuffer);
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(blob);
-  });
-}
-
-// 步骤 2: 将 ArrayBuffer 转换为 Buffer
-function arrayBufferToBuffer(arrayBuffer: ArrayBuffer): Buffer {
-  return Buffer.from(arrayBuffer);
-}
-
-// 步骤 3: 将 Buffer 转换为 Base64
-function bufferToBase64(buffer: Buffer): string {
-  return buffer.toString('base64');
-}
-
-export async function converter(blob: Blob): Promise<string> {
-  try {
-    const arrayBuffer = await blobToArrayBuffer(blob);
-    const buffer = arrayBufferToBuffer(arrayBuffer);
-    const base64 = bufferToBase64(buffer);
-    return base64;
-  } catch (error) {
-    console.error('转换过程中发生错误:', error);
-    throw error;
-  }
-}
