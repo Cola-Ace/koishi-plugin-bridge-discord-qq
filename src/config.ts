@@ -49,7 +49,7 @@ export const Config: Schema<Config> = Schema.object({
   debug: Schema.boolean().description("开启 Debug 模式").default(false),
   download_threads: Schema.number().description("下载文件时的默认线程数").default(4),
   qq_file_limit: Schema.number().description("QQ 文件上传大小上限，单位为字节").default(20971520),
-  discord_file_limit: Schema.number().description("Discord 文件上传大小上限，单位为字节（该选项不应设置太高，避免超过 Discord 本身的限制）").default(10485760).max(26214400),
+  discord_file_limit: Schema.number().description("Discord 文件上传大小上限，单位为字节（该选项不应设置太高，避免超过 Discord 本身的限制）").default(10485760),
   constant: Schema.array(Schema.object({
     enable: Schema.boolean().description("启用").default(true),
     note: Schema.string().description("备注"),

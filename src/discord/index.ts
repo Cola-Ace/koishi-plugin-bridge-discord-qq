@@ -11,7 +11,7 @@ export default class ProcessorDiscord {
     message += `===== 以下为推文内容 =====\n${"description" in msgDetail["embeds"][0] ? msgDetail["embeds"][0]["description"] : ""}`;
 
     for (const word of blacklists) {
-      if (message.toLowerCase().indexOf(word.toLowerCase()) != -1) return [true, ""]; // 发现黑名单
+      if (message.toLowerCase().indexOf(word.toLowerCase()) !== -1) return [true, ""]; // 发现黑名单
     }
 
     // 处理链接中的日文

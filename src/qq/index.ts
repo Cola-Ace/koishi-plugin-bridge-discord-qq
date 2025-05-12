@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 export default class ProcessorQQ {
    // return [stop, reason]
   static async process(elements: h[], session: Session, config: Config, from: BasicType, to: BasicType, ctx: Context, dc_bot: Bot, message_body: MessageBody, Blacklist: BlacklistDetector): Promise<[boolean, string]> {
-    for (let element of elements) {
+    for (const element of elements) {
       switch (element.type) {
         case "at":{
           // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/4
@@ -139,14 +139,14 @@ export default class ProcessorQQ {
     const thread = await dc_bot.internal.startThreadWithoutMessage(channel_id, { name: `转发消息 ${getDate()}`, type: 11 });
     await dc_bot.internal.modifyChannel(thread.id, { locked: true });
 
-    for (let content of contents) { // 单条消息
-      let message_body: MessageBody = { text: "", form: new FormData(), n: 0, embed: null, validElement: false, hasFile: false };
+    for (const content of contents) { // 单条消息
+      const message_body: MessageBody = { text: "", form: new FormData(), n: 0, embed: null, validElement: false, hasFile: false };
       let bridge_message = false;
       let avatar = "";
       let nickname = "";
       if (content["sender"]["user_id"] === from.self_id) bridge_message = true;
 
-      for (let element of content["message"]) {
+      for (const element of content["message"]) {
         switch (element.type) {
           // face 和 mface 在转发消息中都为表情名称 (text)
           case "forward": {
@@ -184,6 +184,9 @@ export default class ProcessorQQ {
 
             break;
           }
+          default: {
+            break;
+          }
         }
       }
 
@@ -195,7 +198,7 @@ export default class ProcessorQQ {
       let has_webhook = false;
       const webhooks_list = await dc_bot.internal.getChannelWebhooks(channel_id);
 
-      for (let webhook of webhooks_list) {
+      for (const webhook of webhooks_list) {
         if (webhook["user"]["id"] === to.self_id && "url" in webhook) {
           webhook_url = webhook["url"];
           webhook_id = webhook["id"];
@@ -263,7 +266,7 @@ export default class ProcessorQQ {
         break;
       }
       case "com.tencent.miniapp_01": {
-        let image = {
+        const image = {
           url: `https://${data["meta"]["detail_1"]["preview"]}`
         };
 
@@ -284,7 +287,7 @@ export default class ProcessorQQ {
         const detail = data["meta"]["detail"];
         const feed = detail["feed"];
 
-        let image = {
+        const image = {
           url: feed["images"][0]["pic_url"]
         }
 
@@ -302,6 +305,9 @@ export default class ProcessorQQ {
         }];
         message_body.validElement = true;
 
+        break;
+      }
+      default: {
         break;
       }
     }
@@ -322,13 +328,13 @@ export default class ProcessorQQ {
 
   static async video(attrs: Dict, discord_file_limit: number, message_body: MessageBody): Promise<[boolean, string]> {
     if (parseInt(attrs.fileSize) > discord_file_limit) {
-      message_body.text += "【检测到大小大于设置上限的视频，请到 QQ 下载】";
+      message_body.text += `【检测到大小大于设置上限的视频，请自行下载】\n下载链接：${attrs.src || attrs.url}\n文件名：${attrs.file}`;
       message_body.validElement = true;
 
       return [false, ""];
     }
 
-    const [file, type] = await getBinary(attrs.url);
+    const [file, type] = await getBinary(attrs.src || attrs.url);
     message_body.form.append(`files[${message_body.n}]`, file, attrs.file);
     message_body.n++;
     message_body.validElement = true;

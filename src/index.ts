@@ -43,7 +43,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
   let nickname = sender.isBot ? sender.name : ("member" in session.event ? session.event.member.nick : sender.name); // 判断是否为 bot
 
   // const elements = message_data.elements.filter(element => element.type !== "at"); // 确保没有@格式
-  let elements = message_data.elements;
+  const elements = message_data.elements;
 
   if (elements.length <= 0 && !Object.keys(message_data).includes("quote")) return;
 
