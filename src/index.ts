@@ -1,6 +1,7 @@
 import { Context, h, Session } from 'koishi';
 import { } from 'koishi-plugin-adapter-onebot';
 import { Config } from './config';
+import sharp from 'sharp';
 
 export * from "./config";
 import { MessageBody } from './types';
@@ -403,8 +404,19 @@ const main = async (ctx: Context, config: Config, session: Session) => {
               nickname = member.nick === null ? member.user.global_name : member.nick;
             }
 
+            // 处理 Discord 默认头像颜色
+            let avatar_color = "";
+            let avatar = `${sender.avatar}?size=64`;
+            if (sender.avatar === null) {
+              avatar_color = config.discord_default_avatar_color.toString();
+              if (config.discord_default_avatar_color === 99){
+                avatar_color = Math.floor(Math.random() * 5).toString();
+              }
+              avatar = `https://cdn.discordapp.com/embed/avatars/${avatar_color}.png`;
+            }
+
             // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/7
-            const avatar = sender.avatar === null ? "https://cdn.discordapp.com/embed/avatars/0.png" : `${sender.avatar}?size=64`;
+            // const avatar = sender.avatar === null ? "https://cdn.discordapp.com/embed/avatars/0.png" : `${sender.avatar}?size=64`;
 
             let message_content = `${quoted_message_id === null ? "" : h.quote(quoted_message_id)}${h.image(avatar)}[Discord] ${nickname}:\n${message}`;
             if (config.file_processor === "Koishi") {
@@ -414,7 +426,8 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                 return;
               }
               const avatar_arrayBuffer = await avatar_blob.arrayBuffer();
-              message_content = `${quoted_message_id === null ? "" : h.quote(quoted_message_id)}${h.image(avatar_arrayBuffer, avatar_type)}[Discord] ${nickname}:\n${message}`;
+              const avatar_resize_arrayBuffer = await sharp(avatar_arrayBuffer).resize(64, 64).toBuffer();
+              message_content = `${quoted_message_id === null ? "" : h.quote(quoted_message_id)}${h.image(avatar_resize_arrayBuffer, avatar_type)}[Discord] ${nickname}:\n${message}`;
             }
 
             let retry_count = 0;

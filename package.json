@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-bridge-qq-discord",
   "description": "自用插件，如需进一步了解请联系我（联系方式见 Github）",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "contributors": [
     "Xc_ace <xca259@gmail.com>"
   ],
@@ -41,6 +41,7 @@
     "eslint": "^8.57.0",
     "koishi": "^4.17.12",
     "koishi-plugin-adapter-onebot": "^6.5.8",
+    "sharp": "^0.34.2",
     "typescript": "^5.5.3",
     "uuid": "^10.0.0",
     "yakumo": "^0.3.13",
