@@ -7,7 +7,8 @@ export * from "./config";
 import { MessageBody } from './types';
 import { convertMsTimestampToISO8601, logger, BlacklistDetector, getBinary } from './utils';
 import ProcessorQQ from './qq';
-// import ProcessorDiscord from './discord';
+import { getWebhook } from "./discord/webhook";
+import ProcessorDiscord from './discord';
 
 export const name = 'bridge-qq-discord';
 
@@ -147,24 +148,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
               // 实现发送消息功能
               if (nickname === null || nickname === "") nickname = sender.name;
 
-              let webhook_url = "";
-              let webhook_id = "";
-              let hasWebhook = false;
-              const webhooks_list = await dc_bot.internal.getChannelWebhooks(to.channel_id);
-
-              for (const webhook of webhooks_list) {
-                if (webhook["user"]["id"] === to.self_id && "url" in webhook) {
-                  webhook_url = webhook["url"];
-                  webhook_id = webhook["id"];
-                  hasWebhook = true;
-                }
-              }
-
-              if (!hasWebhook) {
-                const webhook = await dc_bot.internal.createWebhook(to.channel_id, { name: "Bridge" });
-                webhook_url = webhook["url"];
-                webhook_id = webhook["id"];
-              }
+              const [webhook_url, webhook_id, hasWebhook] = await getWebhook(dc_bot, to.self_id, to.channel_id);
 
               const payload_json = JSON.stringify({
                 content: message_body.text,
@@ -222,49 +206,6 @@ const main = async (ctx: Context, config: Config, session: Session) => {
             const qqbot = ctx.bots[`${to.platform}:${to.self_id}`];
             const dc_bot = ctx.bots[`discord:${from.self_id}`];
 
-            // 屏蔽 TweetShift
-            // if (nickname !== null && nickname.indexOf("TweetShift") !== -1) return;
-
-            // 处理 Tweetshift
-            /*
-             * @deprecated because TweetShift are using IFTTT now (maybe?)
-             *
-            if (nickname !== null && nickname.indexOf("TweetShift") !== -1) {
-              const [stop, message] = ProcessorDiscord.processTweetshift(
-                await dc_bot.internal.getChannelMessage(session.event.channel.id, message_data.id),
-                elements,
-                config.words_blacklist
-              );
-
-              if (stop) return;
-
-              // const messageId = await qqbot.sendMessage(to.channel_id, `${h.image(msg["embeds"][0]["author"]["icon_url"].replace(".jpg", "_200x200.jpg"))}[Discord·TweetShift] ${msg["embeds"][0]["author"]["name"]}:\n${message}`);
-              const messageId = await qqbot.sendMessage(to.channel_id, message);
-              const fromGuildId = await ctx.database.get("channel", {
-                id: channel_id
-              });
-              const toGuildId = await ctx.database.get("channel", {
-                id: to.channel_id
-              });
-              await ctx.database.create("bridge_message", {
-                timestamp: BigInt(Date.now()),
-                from_message_id: message_data.id,
-                from_platform: platform,
-                from_channel_id: channel_id,
-                from_guild_id: fromGuildId[0]["guildId"],
-                from_sender_id: sender.id,
-                from_sender_name: nickname,
-                to_message_id: messageId[0],
-                to_platform: "discord",
-                to_channel_id: to.channel_id,
-                to_guild_id: toGuildId[0]["guildId"],
-                onebot_real_message_id: messageId[0]
-              });
-
-              return;
-            }
-            */
-
             let message = "";
             let quoted_message_id = null;
 
@@ -297,105 +238,8 @@ const main = async (ctx: Context, config: Config, session: Session) => {
               }
             }
 
-            for (const element of elements.length === 0 ? message_data.quote.elements : elements) {
-              switch (element.type) {
-                case "text": {
-                  if (Blacklist.check(element.attrs.content)) return; // 黑名单检测
-
-                  message += element.attrs.content;
-
-                  break;
-                }
-
-                case "at": {
-                  // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/4
-                  if (element.attrs.type === "all") {
-                    message += "@everyone ";
-                    break;
-                  }
-
-                  // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/5
-                  if (element.attrs.type === "here") {
-                    message += "@here ";
-                    break;
-                  }
-
-                  const user_info = await dc_bot.internal.getUser(element.attrs.id);
-                  message += `@${user_info["global_name"] === null ? element.attrs.name : user_info["global_name"]}`;
-
-                  break;
-                }
-
-                case "https:": {
-                  message += `https:${Object.keys(element.attrs)[0]}`;
-
-                  break;
-                }
-
-                case "img": {
-                  if (config.file_processor === "Koishi") {
-                    const [img_blob, img_type, img_error] = await getBinary(element.attrs.src, ctx.http);
-                    if (img_error) {
-                      logger.error(img_error);
-                      break;
-                    }
-                    const img_arrayBuffer = await img_blob.arrayBuffer();
-                    message += h.image(img_arrayBuffer, element.attrs.type);
-                  } else {
-                    message += h.image(element.attrs.src);
-                  }
-
-                  break;
-                }
-
-                case "face": {
-                  const src = element.children[0].attrs.src;
-                  message += h.image(`${src}${src.indexOf("?quality=lossless") !== -1 ? "&size=44" : ""}`);
-
-                  break;
-                }
-
-                case "record":
-                case "file": {
-                  if (parseInt(element.attrs.size) > config.qq_file_limit) {
-                    message += "【检测到大小超过设置上限的文件，请到 Discord 查看】"
-                    break;
-                  }
-                  const path = await qqbot.internal.downloadFile(element.attrs.src);
-
-                  await qqbot.internal.uploadGroupFile(to.channel_id, path, element.attrs.file);
-
-                  break;
-                }
-
-                case "video": {
-                  if (parseInt(element.attrs.size) > config.qq_file_limit) {
-                    message += "【检测到大小超过设置上限的视频，请到 Discord 查看】"
-                    break;
-                  }
-
-                  if (element.attrs.src.indexOf("youtube.com") !== -1) break;
-
-                  if (config.file_processor === "Koishi") {
-                    const [video_blob, video_type, video_error] = await getBinary(element.attrs.src, ctx.http);
-                    if (video_error) {
-                      logger.error(video_error);
-                      break;
-                    }
-                    const video_arrayBuffer = await video_blob.arrayBuffer();
-                    message += h.video(video_arrayBuffer, element.attrs.type);
-                  } else {
-                    message += h.video(element.attrs.src);
-                  }
-
-                  break;
-                }
-
-                default: {
-                  break;
-                }
-              }
-            }
+            // 处理消息元素
+            message = await ProcessorDiscord.process(elements, config, [from, to], ctx, message, message_data, dc_bot, qqbot, Blacklist);
 
             // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/6
             if (!sender.isBot) {
@@ -431,7 +275,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
             }
 
             let retry_count = 0;
-            while (retry_count < 4){
+            while (retry_count <= 3){
               try {
                 const message_id = await qqbot.sendMessage(to.channel_id, message_content);
                 const from_guild_id = await ctx.database.get("channel", {
