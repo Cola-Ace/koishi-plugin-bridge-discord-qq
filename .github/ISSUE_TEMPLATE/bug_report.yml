@@ -1,7 +1,8 @@
 name: Bug 反馈
 description: 报告插件运行中出现的异常行为
-title: '[BUG] '
+title: "[BUG] "
 labels: bug
+assignees: "Cola-Ace"
 body:
   - type: markdown
     attributes:
