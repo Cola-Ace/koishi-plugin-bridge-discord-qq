@@ -154,7 +154,11 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                 content: message_body.text,
                 username: `[QQ:${sender.id}] ${nickname}`,
                 avatar_url: sender.avatar,
-                embeds: message_body.embed
+                embeds: message_body.embed,
+                // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/8
+                allowed_mentions: {
+                  parse: []
+                },
               });
               message_body.form.append("payload_json", payload_json);
 
