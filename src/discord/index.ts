@@ -1,4 +1,5 @@
 import { Bot, Context, h } from "koishi";
+import type { Session } from "koishi";
 import { getBinary, logger, BlacklistDetector } from "../utils";
 import { Config, BasicType } from "../config";
 
@@ -13,9 +14,9 @@ export default class ProcessorDiscord {
 		[from, to]: [BasicType, BasicType],
 		ctx: Context,
 		message: string,
-		message_data: any,
-    dc_bot: Bot,
-    qqbot: Bot,
+		message_data: Session["event"]["message"],
+		dc_bot: Bot,
+		qqbot: Bot,
 		Blacklist: BlacklistDetector
 	): Promise<string> {
 		for (const element of elements.length === 0 ? message_data.quote.elements : elements) {
@@ -125,6 +126,6 @@ export default class ProcessorDiscord {
 			}
 		}
 
-    return message;
+		return message;
 	}
 }
