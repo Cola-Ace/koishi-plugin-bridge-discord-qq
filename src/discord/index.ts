@@ -2,6 +2,8 @@ import { Bot, Context, h } from "koishi";
 import { getBinary, logger, BlacklistDetector } from "../utils";
 import { Config, BasicType } from "../config";
 
+const { URL } = require("url");
+
 // return stop = false 相当于 break
 
 export default class ProcessorDiscord {
@@ -93,7 +95,14 @@ export default class ProcessorDiscord {
 						break;
 					}
 
-					if (element.attrs.src.indexOf("youtube.com") !== -1) break;
+					try {
+						const urlHost = new URL(element.attrs.src).host;
+						const allowedHosts = ["youtube.com", "www.youtube.com"];
+						if (allowedHosts.includes(urlHost)) break;
+					} catch (error) {
+						logger.error(`Invalid URL: ${element.attrs.src}`);
+						break;
+					}
 
 					if (config.file_processor === "Koishi") {
 						const [video_blob, video_type, video_error] = await getBinary(element.attrs.src, ctx.http);
