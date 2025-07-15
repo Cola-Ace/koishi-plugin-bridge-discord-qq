@@ -1,5 +1,5 @@
 import { Bot, Context, Dict, h, Session, HTTP } from "koishi";
-import { getBinary, logger, getDate, BlacklistDetector } from "../utils";
+import { getBinary, logger, getDate, BlacklistDetector, generateMessageBody } from "../utils";
 import { Config, BasicType } from "../config";
 import { MessageBody } from "../types";
 import { v4 as uuidv4 } from "uuid";
@@ -25,9 +25,11 @@ export default class ProcessorQQ {
 				case "at": {
 					// https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/4
 					if (element.attrs.type === "all") {
-						message_body.text += "@全体成员";
+						message_body.text += "@everyone";
 						message_body.validElement = true;
-						return [false, ""];
+            message_body.mentionEveryone = true;
+						// return [false, ""];
+            break;
 					}
 
 					const [stop, reason] = await this.at(element.attrs.id, from.channel_id, session, message_body);
@@ -154,7 +156,7 @@ export default class ProcessorQQ {
 
 		for (const content of contents) {
 			// 单条消息
-			const message_body: MessageBody = { text: "", form: new FormData(), n: 0, embed: null, validElement: false, hasFile: false };
+			const message_body: MessageBody = generateMessageBody();
 			let bridge_message = false;
 			let avatar = "";
 			let nickname = "";
@@ -185,15 +187,6 @@ export default class ProcessorQQ {
 						break;
 					}
 					case "text": {
-						// process TweetShift
-						// if (bridge_message && nickname === "") {
-						//   const temp = element["data"]["text"].split(`[Discord${element["data"]["text"].indexOf("[Discord·TweetShift]") !== -1 ? "·TweetShift" : ""}] `)[1].split(":");
-						//   nickname = temp[0];
-						//   temp.splice(0, 1)
-						//   this.text(blacklist, temp.join(""), message_body);
-
-						//   break;
-						// }
 						this.text(blacklist, element["data"]["text"], message_body);
 
 						break;

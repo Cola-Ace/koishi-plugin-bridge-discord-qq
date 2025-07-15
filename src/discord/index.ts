@@ -3,7 +3,7 @@ import type { Session } from "koishi";
 import { getBinary, logger, BlacklistDetector } from "../utils";
 import { Config, BasicType } from "../config";
 
-const { URL } = require("url");
+import { URL } from "url";
 
 // return stop = false 相当于 break
 
