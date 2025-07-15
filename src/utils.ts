@@ -1,4 +1,5 @@
 import { Logger, HTTP } from 'koishi';
+import { MessageBody } from './types';
 
 export const logger = new Logger("bridge");
 export function convertMsTimestampToISO8601(msTimestamp: number): string {
@@ -8,6 +9,18 @@ export function convertMsTimestampToISO8601(msTimestamp: number): string {
   // 使用 .toISOString() 方法转换为 ISO 8601 格式
   // 注意：此方法返回的是 UTC 时间
   return date.toISOString();
+}
+
+export function generateMessageBody(): MessageBody {
+  return {
+    text: "",
+    form: new FormData(),
+    n: 0,
+    embed: [],
+    validElement: false,
+    hasFile: false,
+    mentionEveryone: false
+  };
 }
 
 export function getDate() {

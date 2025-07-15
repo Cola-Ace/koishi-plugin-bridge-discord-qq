@@ -5,7 +5,7 @@ import sharp from 'sharp';
 
 export * from "./config";
 import { MessageBody } from './types';
-import { convertMsTimestampToISO8601, logger, BlacklistDetector, getBinary } from './utils';
+import { convertMsTimestampToISO8601, logger, BlacklistDetector, getBinary, generateMessageBody } from './utils';
 import ProcessorQQ from './qq';
 import { getWebhook } from "./discord/webhook";
 import ProcessorDiscord from './discord';
@@ -62,7 +62,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
 
               const dc_bot = ctx.bots[`discord:${to.self_id}`];
 
-              const message_body: MessageBody = { text: "", form: new FormData(), n: 0, embed: null, validElement: false, hasFile: false };
+              const message_body: MessageBody = generateMessageBody();
 
               if ("quote" in message_data) {
                 // 不同平台之间回复 & 同平台之间回复
@@ -157,7 +157,7 @@ const main = async (ctx: Context, config: Config, session: Session) => {
                 embeds: message_body.embed,
                 // https://github.com/Cola-Ace/koishi-plugin-bridge-discord-qq/issues/8
                 allowed_mentions: {
-                  parse: []
+                  parse: (message_body.mentionEveryone ? ["everyone"] : []),
                 },
               });
               message_body.form.append("payload_json", payload_json);

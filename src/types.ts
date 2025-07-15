@@ -16,4 +16,7 @@ export interface MessageBody {
 
   // 当前消息体是否存在文件
   hasFile: boolean
+
+  // 是否 @everyone
+  mentionEveryone: boolean
 }
