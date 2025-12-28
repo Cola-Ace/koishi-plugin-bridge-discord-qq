@@ -72,7 +72,19 @@ export default class ProcessorDiscord {
 
 				case "face": {
 					const src = element.children[0].attrs.src;
-					message += h.image(`${src}${src.indexOf("?quality=lossless") !== -1 ? "&size=44" : ""}`);
+          const url = `${src}${src.indexOf("?quality=lossless") !== -1 ? "&size=44" : ""}`
+
+          if (config.file_processor === "Koishi") {
+						const [img_blob, img_type, img_error] = await getBinary(url, ctx.http);
+						if (img_error) {
+							logger.error(img_error);
+							break;
+						}
+						const img_arrayBuffer = await img_blob.arrayBuffer();
+						message += h.image(img_arrayBuffer, element.attrs.type);
+					} else {
+						message += h.image(url);
+					}
 
 					break;
 				}
