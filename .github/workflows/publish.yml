@@ -40,8 +40,7 @@ jobs:
       run: echo "PACKAGE_VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
 
     - name: Publish to npm (Trusted Publishing)
-      run: npm publish --provenance --access public
-      # 注意：不再需要 NODE_AUTH_TOKEN，OIDC 自动处理认证
+      run: npm publish
 
     - name: Create Release
       uses: ncipollo/release-action@v1
