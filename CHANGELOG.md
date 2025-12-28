@@ -1,5 +1,5 @@
 ### ✨ Features
-- [QQ -> Discord] QQ 群的 `@全体成员` 现在会在 Discord 中转义为 `@everyone` 而不是仅展示文字
+- None
 
 ### 🐞 Bug Fixes
-- None
+- [Discord -> QQ] 修复了 Discord 消息中带表情的话会导致整条消息无法正常发送的 bug
